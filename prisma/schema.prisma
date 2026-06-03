@@ -1,0 +1,1032 @@
+// =============================================================
+// PERSONAL CFO OS — PRISMA SCHEMA
+// PostgreSQL · Production-grade
+// Designed for: INR (multi-currency ready), single workspace
+// (multi-workspace ready), simple auth (RBAC ready)
+// =============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================
+// ENUMS
+// =============================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  ADVISOR
+  VIEWER
+}
+
+enum CurrencyCode {
+  INR
+  USD
+  EUR
+  GBP
+  AED
+  SGD
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+  SALARY
+  FIXED_DEPOSIT
+  PPF
+  EPF
+  NPS
+  WALLET
+  CRYPTO_WALLET
+  BUSINESS_CURRENT
+  BUSINESS_SAVINGS
+  BUSINESS_OD
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  INVESTMENT
+  LOAN_REPAYMENT
+  LOAN_DISBURSEMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RECONCILED
+}
+
+enum AssetClass {
+  EQUITY
+  DEBT
+  GOLD
+  SILVER
+  REAL_ESTATE
+  CRYPTO
+  COMMODITY
+  CASH_EQUIVALENT
+  INTERNATIONAL
+  ALTERNATIVE
+}
+
+enum AssetType {
+  MUTUAL_FUND
+  DIRECT_STOCK
+  ETF
+  INDEX_FUND
+  GOLD_PHYSICAL
+  GOLD_DIGITAL
+  SOVEREIGN_GOLD_BOND
+  FIXED_DEPOSIT
+  PPF
+  EPF
+  NPS
+  BOND
+  REAL_ESTATE
+  CRYPTO
+  SILVER
+  REIT
+  INVIT
+  US_STOCKS
+  OTHER
+}
+
+enum LiabilityType {
+  HOME_LOAN
+  CAR_LOAN
+  EDUCATION_LOAN
+  PERSONAL_LOAN
+  BUSINESS_LOAN
+  OVERDRAFT
+  CREDIT_CARD
+  FAMILY_DEBT
+  INHERITED_DEBT
+  INFORMAL_DEBT
+  OTHER
+}
+
+enum GoalType {
+  EMERGENCY_FUND
+  RETIREMENT
+  HOME_PURCHASE
+  VEHICLE
+  EDUCATION
+  MARRIAGE
+  TRAVEL
+  BUSINESS
+  FINANCIAL_FREEDOM
+  WEALTH_CREATION
+  CUSTOM
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_TRACK
+  AT_RISK
+  BEHIND
+  COMPLETED
+  PAUSED
+}
+
+enum GoalPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SIPStatus {
+  ACTIVE
+  PAUSED
+  STOPPED
+  COMPLETED
+}
+
+enum SIPFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+enum DocumentType {
+  PAN_CARD
+  AADHAAR
+  PASSPORT
+  DRIVING_LICENSE
+  ITR
+  FORM_16
+  GST_CERTIFICATE
+  PROPERTY_DOCUMENT
+  LOAN_DOCUMENT
+  INSURANCE_POLICY
+  INVESTMENT_STATEMENT
+  BANK_STATEMENT
+  SALARY_SLIP
+  OFFER_LETTER
+  MEDICAL_RECORD
+  LEGAL_DOCUMENT
+  COMPANY_DOCUMENT
+  CONTRACT
+  WARRANTY
+  TAX_NOTICE
+  OTHER
+}
+
+enum NotificationType {
+  SIP_REMINDER
+  BILL_REMINDER
+  EMI_REMINDER
+  INSURANCE_RENEWAL
+  GOAL_MILESTONE
+  BUDGET_BREACH
+  SALARY_CREDIT
+  INVESTMENT_OPPORTUNITY
+  PORTFOLIO_REBALANCE
+  AI_INSIGHT
+  GOAL_AT_RISK
+  NET_WORTH_UPDATE
+  DOCUMENT_EXPIRY
+  TRANSACTION_ALERT
+}
+
+enum RecommendationCategory {
+  SPENDING
+  INVESTMENT
+  DEBT
+  INSURANCE
+  TAX
+  GOAL
+  PORTFOLIO
+  EMERGENCY_FUND
+  BUSINESS
+}
+
+enum RecommendationPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum BusinessType {
+  PROPRIETORSHIP
+  PARTNERSHIP
+  PRIVATE_LIMITED
+  LLP
+  OTHER
+}
+
+// =============================================================
+// WORKSPACE  (multi-tenant ready — one workspace per user now)
+// =============================================================
+
+model Workspace {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  currency    CurrencyCode @default(INR)
+  timezone    String       @default("Asia/Kolkata")
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  members      WorkspaceMember[]
+  accounts     Account[]
+  categories   Category[]
+  budgets      Budget[]
+  assets       Asset[]
+  liabilities  Liability[]
+  goals        Goal[]
+  businesses   Business[]
+  documents    Document[]
+  snapshots    NetWorthSnapshot[]
+  healthScores FinancialHealthScore[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        UserRole  @default(OWNER)
+  isActive    Boolean   @default(true)
+  joinedAt    DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// =============================================================
+// USER & PROFILE
+// =============================================================
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  phone             String?    @unique
+  passwordHash      String
+  firstName         String
+  lastName          String?
+  avatarUrl         String?
+  role              UserRole   @default(OWNER)
+  status            UserStatus @default(ACTIVE)
+  emailVerified     Boolean    @default(false)
+  phoneVerified     Boolean    @default(false)
+  twoFactorEnabled  Boolean    @default(false)
+  twoFactorSecret   String?
+  resetOtp          String?
+  resetOtpExpiry    DateTime?
+  lastLoginAt       DateTime?
+  currentChallenge  String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  profile                  UserProfile?
+  sessions                 Session[]
+  workspaces               WorkspaceMember[]
+  vaultMemories            AIVaultMemory[]
+  recommendations          Recommendation[]
+  notifications            Notification[]
+  notificationPreference   NotificationPreference?
+  webAuthnCredentials      WebAuthnCredential[]
+
+  @@map("users")
+}
+
+model WebAuthnCredential {
+  id                   String   @id @default(cuid())
+  userId               String
+  credentialID         Bytes    @unique
+  credentialPublicKey  Bytes
+  counter              BigInt
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("webauthn_credentials")
+}
+
+model UserProfile {
+  id                    String       @id @default(cuid())
+  userId                String       @unique
+  dateOfBirth           DateTime?
+  age                   Int?
+  city                  String?
+  state                 String?
+  country               String       @default("IN")
+  panNumber             String?      // Encrypted at app level
+  retirementAge         Int?
+  expectedLifespan      Int?
+  riskTolerance         Int?         // 1–10 scale
+  riskProfile           String?      // Conservative / Moderate / Aggressive
+  monthlyIncome         Decimal?     @db.Decimal(15, 2)
+  annualCTC             Decimal?     @db.Decimal(15, 2)
+  expectedSalaryGrowth  Decimal?     @db.Decimal(5, 2)
+  employmentType        String?
+  dependents            Int          @default(0)
+  maritalStatus         String?
+  financialFreedomTarget Decimal?    @db.Decimal(15, 2)
+  financialFreedomYear  Int?
+  inflationAssumption   Decimal      @db.Decimal(5, 2) @default(7.00)
+  metadata              Json?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  user                  User         @relation(fields: [userId], references: [id])
+
+  @@map("user_profiles")
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  refreshToken String? @unique
+  device      String?
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+// =============================================================
+// ACCOUNTS
+// =============================================================
+
+model Account {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  name          String
+  type          AccountType
+  bankName      String?
+  accountNumber String?      // Encrypted; display masked
+  ifscCode      String?
+  balance       Decimal      @db.Decimal(15, 2) @default(0)
+  currency      CurrencyCode @default(INR)
+  isDefault     Boolean      @default(false)
+  isActive      Boolean      @default(true)
+  color         String?
+  icon          String?
+  notes         String?
+  lastSyncedAt  DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id])
+  transactions   Transaction[]
+  balanceHistory AccountBalance[]
+
+  @@map("accounts")
+}
+
+model AccountBalance {
+  id         String   @id @default(cuid())
+  accountId  String
+  balance    Decimal  @db.Decimal(15, 2)
+  recordedAt DateTime @default(now())
+
+  account    Account  @relation(fields: [accountId], references: [id])
+
+  @@index([accountId, recordedAt])
+  @@map("account_balances")
+}
+
+// =============================================================
+// CATEGORIES & BUDGETS
+// =============================================================
+
+model Category {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  group       String    // NEED, WANT, FUN, HOME, INVESTMENT
+  color       String?
+  icon        String?
+  isSystem    Boolean   @default(false) // system default categories
+  isActive    Boolean   @default(true)
+  parentId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id])
+  parent       Category?     @relation("SubCategories", fields: [parentId], references: [id])
+  children     Category[]    @relation("SubCategories")
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("categories")
+}
+
+model Budget {
+  id          String       @id @default(cuid())
+  workspaceId String
+  categoryId  String
+  name        String
+  amount      Decimal      @db.Decimal(15, 2)
+  currency    CurrencyCode @default(INR)
+  period      String       // MONTHLY, WEEKLY, YEARLY
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean      @default(true)
+  alertAt     Int          @default(80) // percent
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+  category    Category     @relation(fields: [categoryId], references: [id])
+
+  @@map("budgets")
+}
+
+// =============================================================
+// TRANSACTIONS
+// =============================================================
+
+model Transaction {
+  id                   String            @id @default(cuid())
+  workspaceId          String
+  accountId            String
+  categoryId           String?
+  type                 TransactionType
+  status               TransactionStatus @default(COMPLETED)
+  amount               Decimal           @db.Decimal(15, 2)
+  currency             CurrencyCode      @default(INR)
+  amountInBaseCurrency Decimal           @db.Decimal(15, 2)
+  description          String?
+  notes                String?
+  merchant             String?
+  reference            String?
+  date                 DateTime
+  isRecurring          Boolean           @default(false)
+  recurringId          String?
+  receiptUrl           String?
+  tags                 String[]
+  metadata             Json?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  deletedAt            DateTime?
+
+  account   Account                  @relation(fields: [accountId], references: [id])
+  category  Category?                @relation(fields: [categoryId], references: [id])
+  recurring RecurringTransaction?    @relation(fields: [recurringId], references: [id])
+  ocrResult OCRResult?
+
+  @@index([workspaceId, date])
+  @@index([accountId, date])
+  @@index([workspaceId, type, date])
+  @@map("transactions")
+}
+
+model RecurringTransaction {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  name          String
+  amount        Decimal      @db.Decimal(15, 2)
+  currency      CurrencyCode @default(INR)
+  frequency     SIPFrequency
+  categoryId    String?
+  nextDueDate   DateTime
+  lastProcessed DateTime?
+  isActive      Boolean      @default(true)
+  description   String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  transactions  Transaction[]
+
+  @@map("recurring_transactions")
+}
+
+// =============================================================
+// INVESTMENTS & PORTFOLIO
+// =============================================================
+
+model Asset {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  name           String
+  class          AssetClass
+  type           AssetType
+  symbol         String?      // NSE/BSE symbol or MF scheme code
+  isin           String?
+  units          Decimal?     @db.Decimal(18, 6)
+  purchasePrice  Decimal?     @db.Decimal(15, 4)
+  currentPrice   Decimal?     @db.Decimal(15, 4)
+  currentValue   Decimal      @db.Decimal(15, 2)
+  investedAmount Decimal      @db.Decimal(15, 2)
+  currency       CurrencyCode @default(INR)
+  purchaseDate   DateTime?
+  maturityDate   DateTime?
+  expectedReturn Decimal?     @db.Decimal(5, 2) // Annual CAGR %
+  platform       String?      // Zerodha, Groww, Angel One, etc.
+  folioNumber    String?
+  isActive       Boolean      @default(true)
+  notes          String?
+  goalId         String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id])
+  goal         Goal?            @relation(fields: [goalId], references: [id])
+  transactions AssetTransaction[]
+  sipPlans     SIPPlan[]
+  priceHistory AssetPrice[]
+
+  @@map("assets")
+}
+
+model AssetTransaction {
+  id        String       @id @default(cuid())
+  assetId   String
+  type      String       // BUY, SELL, DIVIDEND, SPLIT, BONUS, REDEMPTION, MATURITY, SIP
+  units     Decimal?     @db.Decimal(18, 6)
+  price     Decimal?     @db.Decimal(15, 4)
+  amount    Decimal      @db.Decimal(15, 2)
+  currency  CurrencyCode @default(INR)
+  date      DateTime
+  notes     String?
+  sipPlanId String?
+  createdAt DateTime     @default(now())
+
+  asset     Asset        @relation(fields: [assetId], references: [id])
+
+  @@map("asset_transactions")
+}
+
+model AssetPrice {
+  id      String   @id @default(cuid())
+  assetId String
+  price   Decimal  @db.Decimal(15, 4)
+  date    DateTime
+
+  asset   Asset    @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, date])
+  @@index([assetId, date])
+  @@map("asset_prices")
+}
+
+model SIPPlan {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  assetId        String
+  name           String
+  amount         Decimal      @db.Decimal(15, 2)
+  currency       CurrencyCode @default(INR)
+  frequency      SIPFrequency
+  startDate      DateTime
+  endDate        DateTime?
+  nextDueDate    DateTime
+  stepUpPercent  Decimal?     @db.Decimal(5, 2) // Annual step-up %
+  goalId         String?
+  status         SIPStatus    @default(ACTIVE)
+  totalInvested  Decimal      @db.Decimal(15, 2) @default(0)
+  totalUnits     Decimal?     @db.Decimal(18, 6) @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  asset          Asset        @relation(fields: [assetId], references: [id])
+  goal           Goal?        @relation(fields: [goalId], references: [id])
+
+  @@map("sip_plans")
+}
+
+// =============================================================
+// LIABILITIES
+// =============================================================
+
+model Liability {
+  id                 String        @id @default(cuid())
+  workspaceId        String
+  name               String
+  type               LiabilityType
+  lender             String?
+  principalAmount    Decimal       @db.Decimal(15, 2)
+  outstandingBalance Decimal       @db.Decimal(15, 2)
+  interestRate       Decimal?      @db.Decimal(6, 4) // Annual %
+  emiAmount          Decimal?      @db.Decimal(15, 2)
+  tenure             Int?          // months
+  startDate          DateTime?
+  endDate            DateTime?
+  nextDueDate        DateTime?
+  currency           CurrencyCode  @default(INR)
+  isActive           Boolean       @default(true)
+  isFormalAgreement  Boolean       @default(false)
+  notes              String?
+  metadata           Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id])
+  payments    LiabilityPayment[]
+  emiSchedule EMISchedule[]
+
+  @@map("liabilities")
+}
+
+model LiabilityPayment {
+  id          String    @id @default(cuid())
+  liabilityId String
+  amount      Decimal   @db.Decimal(15, 2)
+  principal   Decimal?  @db.Decimal(15, 2)
+  interest    Decimal?  @db.Decimal(15, 2)
+  date        DateTime
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  liability   Liability @relation(fields: [liabilityId], references: [id])
+
+  @@map("liability_payments")
+}
+
+model EMISchedule {
+  id            String    @id @default(cuid())
+  liabilityId   String
+  installmentNo Int
+  dueDate       DateTime
+  emiAmount     Decimal   @db.Decimal(15, 2)
+  principal     Decimal   @db.Decimal(15, 2)
+  interest      Decimal   @db.Decimal(15, 2)
+  balance       Decimal   @db.Decimal(15, 2)
+  isPaid        Boolean   @default(false)
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  liability     Liability @relation(fields: [liabilityId], references: [id])
+
+  @@map("emi_schedules")
+}
+
+// =============================================================
+// GOALS & PLANNING
+// =============================================================
+
+model Goal {
+  id                  String       @id @default(cuid())
+  workspaceId         String
+  name                String
+  type                GoalType
+  status              GoalStatus   @default(NOT_STARTED)
+  priority            GoalPriority @default(MEDIUM)
+  targetAmount        Decimal      @db.Decimal(15, 2)
+  inflationAdjustedTarget Decimal? @db.Decimal(15, 2) // Calculated
+  currentAmount       Decimal      @db.Decimal(15, 2) @default(0)
+  currency            CurrencyCode @default(INR)
+  targetDate          DateTime
+  startDate           DateTime     @default(now())
+  inflationRate       Decimal?     @db.Decimal(5, 2)
+  expectedReturn      Decimal?     @db.Decimal(5, 2) // CAGR %
+  requiredSIP         Decimal?     @db.Decimal(15, 2)
+  stepUpSIP           Decimal?     @db.Decimal(5, 2) // Annual step-up %
+  successProbability  Decimal?     @db.Decimal(5, 2)
+  ffImpactDays        Int?         // Days delayed to FF goal if compromised
+  notes               String?
+  icon                String?
+  color               String?
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  deletedAt           DateTime?
+
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id])
+  contributions GoalContribution[]
+  milestones    GoalMilestone[]
+  assets        Asset[]
+  sipPlans      SIPPlan[]
+
+  @@map("goals")
+}
+
+model GoalContribution {
+  id        String       @id @default(cuid())
+  goalId    String
+  amount    Decimal      @db.Decimal(15, 2)
+  currency  CurrencyCode @default(INR)
+  date      DateTime
+  notes     String?
+  source    String?      // MANUAL, SIP, INVESTMENT_GAIN, LUMP_SUM
+  createdAt DateTime     @default(now())
+
+  goal      Goal         @relation(fields: [goalId], references: [id])
+
+  @@map("goal_contributions")
+}
+
+model GoalMilestone {
+  id           String    @id @default(cuid())
+  goalId       String
+  name         String
+  targetAmount Decimal   @db.Decimal(15, 2)
+  targetDate   DateTime?
+  isReached    Boolean   @default(false)
+  reachedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  goal         Goal      @relation(fields: [goalId], references: [id])
+
+  @@map("goal_milestones")
+}
+
+// =============================================================
+// BUSINESS FINANCE
+// =============================================================
+
+model Business {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  name           String
+  type           BusinessType
+  gstNumber      String?
+  panNumber      String?
+  registrationNo String?
+  annualTurnover Decimal?     @db.Decimal(15, 2)
+  currency       CurrencyCode @default(INR)
+  industry       String?
+  isActive       Boolean      @default(true)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id])
+  accounts     BusinessAccount[]
+  transactions BusinessTransaction[]
+
+  @@map("businesses")
+}
+
+model BusinessAccount {
+  id          String       @id @default(cuid())
+  businessId  String
+  name        String
+  type        String       // CURRENT, OD, CC, SAVINGS
+  bankName    String?
+  balance     Decimal      @db.Decimal(15, 2) @default(0)
+  odLimit     Decimal?     @db.Decimal(15, 2)
+  odDrawn     Decimal?     @db.Decimal(15, 2) @default(0)
+  currency    CurrencyCode @default(INR)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  business     Business             @relation(fields: [businessId], references: [id])
+  transactions BusinessTransaction[]
+
+  @@map("business_accounts")
+}
+
+model BusinessTransaction {
+  id           String       @id @default(cuid())
+  businessId   String
+  accountId    String?
+  type         String       // REVENUE, EXPENSE, TRANSFER
+  amount       Decimal      @db.Decimal(15, 2)
+  currency     CurrencyCode @default(INR)
+  category     String?
+  description  String?
+  date         DateTime
+  gstAmount    Decimal?     @db.Decimal(15, 2)
+  gstRate      Decimal?     @db.Decimal(5, 2)
+  invoiceNo    String?
+  party        String?
+  isReconciled Boolean      @default(false)
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  business     Business         @relation(fields: [businessId], references: [id])
+  account      BusinessAccount? @relation(fields: [accountId], references: [id])
+
+  @@map("business_transactions")
+}
+
+// =============================================================
+// DOCUMENTS & OCR
+// =============================================================
+
+model Document {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  type           DocumentType
+  name           String
+  description    String?
+  fileUrl        String       // S3 / Cloudflare R2 URL
+  fileSize       Int?
+  mimeType       String?
+  tags           String[]
+  expiryDate     DateTime?
+  isConfidential Boolean      @default(false)
+  vaultPinHash   String?      // Hashed 6-digit PIN for vault docs
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+  ocrResult   OCRResult?
+
+  @@map("documents")
+}
+
+model OCRResult {
+  id            String    @id @default(cuid())
+  documentId    String?   @unique
+  transactionId String?   @unique
+  rawText       String?
+  merchant      String?
+  amount        Decimal?  @db.Decimal(15, 2)
+  date          DateTime?
+  category      String?
+  confidence    Decimal?  @db.Decimal(5, 2)
+  rawData       Json?
+  processedAt   DateTime  @default(now())
+
+  document    Document?    @relation(fields: [documentId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@map("ocr_results")
+}
+
+// =============================================================
+// AI LAYER
+// =============================================================
+
+model AIVaultMemory {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // GOAL, PURCHASE, BEHAVIOR, RISK, LIFE_EVENT, MISTAKE, PREFERENCE, INSIGHT
+  title       String
+  content     String
+  embedding   Json?    // Stored as JSON array; move to pgvector when scaling
+  importance  Int      @default(5) // 1–10
+  tags        String[]
+  metadata    Json?
+  recordedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, type])
+  @@map("ai_vault_memories")
+}
+
+model Recommendation {
+  id          String                 @id @default(cuid())
+  userId      String
+  category    RecommendationCategory
+  priority    RecommendationPriority
+  title       String
+  body        String
+  impact      String?                // "+₹40,000/year" or "−42 days to FF goal"
+  action      String?
+  isRead      Boolean                @default(false)
+  isDismissed Boolean                @default(false)
+  isActedOn   Boolean                @default(false)
+  expiresAt   DateTime?
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  user        User                   @relation(fields: [userId], references: [id])
+
+  @@map("recommendations")
+}
+
+// =============================================================
+// FINANCIAL HEALTH & NET WORTH HISTORY
+// =============================================================
+
+model NetWorthSnapshot {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  totalAssets      Decimal   @db.Decimal(15, 2)
+  totalLiabilities Decimal   @db.Decimal(15, 2)
+  netWorth         Decimal   @db.Decimal(15, 2)
+  breakdown        Json      // { equity, debt, gold, real_estate, cash, business, loans }
+  snapshotDate     DateTime
+  createdAt        DateTime  @default(now())
+
+  workspace        Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId, snapshotDate])
+  @@map("net_worth_snapshots")
+}
+
+model FinancialHealthScore {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  totalScore      Int       // 0–100
+  liquidityScore  Int
+  debtScore       Int
+  savingsScore    Int
+  investmentScore Int
+  cashFlowScore   Int
+  goalScore       Int
+  insuranceScore  Int
+  breakdown       Json
+  scoredAt        DateTime  @default(now())
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@map("financial_health_scores")
+}
+
+// =============================================================
+// NOTIFICATIONS
+// =============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  channel   String           // IN_APP, EMAIL, PUSH, WHATSAPP
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  email       Boolean  @default(true)
+  push        Boolean  @default(true)
+  whatsapp    Boolean  @default(false)
+  inApp       Boolean  @default(true)
+  preferences Json     // { SIP_REMINDER: {email: true, push: true}, ... }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("notification_preferences")
+}
+
+// =============================================================
+// AUDIT LOG (append-only)
+// =============================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  workspaceId String?
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, EXPORT, VIEW_VAULT
+  resource    String   // Table name
+  resourceId  String?
+  oldData     Json?
+  newData     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([resource, resourceId])
+  @@map("audit_logs")
+}
