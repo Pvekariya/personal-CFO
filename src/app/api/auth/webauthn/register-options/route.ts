@@ -24,8 +24,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const url = new URL(request.url)
-    const rpID = url.hostname
+    const host = request.headers.get("host") || "localhost"
+    const rpID = host.split(":")[0]
 
     const options = await generateRegistrationOptions({
       rpName,

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { writeFile } from "fs/promises"
-import path from "path"
+import { prisma } from "@/lib/db/client"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -22,13 +21,15 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     
-    // Ensure filename is safe
-    const filename = `${userId}-${Date.now()}${path.extname(file.name)}`
-    const uploadDir = path.join(process.cwd(), "public/uploads/avatars")
+    const base64String = buffer.toString("base64")
+    const mimeType = file.type || "image/jpeg"
+    const fileUrl = `data:${mimeType};base64,${base64String}`
     
-    await writeFile(path.join(uploadDir, filename), buffer)
-    
-    const fileUrl = `/uploads/avatars/${filename}`
+    // Save to user profile in database
+    await prisma.user.update({
+      where: { id: userId },
+      data: { image: fileUrl }
+    })
 
     return NextResponse.json({ url: fileUrl })
   } catch (error) {
