@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db/client"
 import { generateAuthenticationOptions } from "@simplewebauthn/server"
 
-const rpID = "localhost"
+// rpID is derived dynamically
 
 export async function POST(request: Request) {
   try {
@@ -23,6 +23,9 @@ export async function POST(request: Request) {
     if (user.webAuthnCredentials.length === 0) {
       return NextResponse.json({ error: "No biometrics registered" }, { status: 400 })
     }
+
+    const url = new URL(request.url)
+    const rpID = url.hostname
 
     const options = await generateAuthenticationOptions({
       rpID,

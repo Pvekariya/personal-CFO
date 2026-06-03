@@ -3,8 +3,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/db/client"
 import { verifyRegistrationResponse } from "@simplewebauthn/server"
 
-const rpID = "localhost"
-const origin = "http://localhost:3000"
+// rpID and origin are derived dynamically
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -22,12 +21,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Challenge not found" }, { status: 400 })
     }
 
+    const url = new URL(request.url)
+    const rpID = url.hostname
+    const origin = url.origin
+
     let verification;
     try {
       verification = await verifyRegistrationResponse({
         response: body,
         expectedChallenge: user.currentChallenge,
-        expectedOrigin: [origin, "http://localhost:3001", "http://localhost:3002"],
+        expectedOrigin: [origin, "http://localhost:3000", "http://localhost:3001"],
         expectedRPID: rpID,
       })
     } catch (error: any) {

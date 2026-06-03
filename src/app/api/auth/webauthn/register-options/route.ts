@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db/client"
 import { generateRegistrationOptions } from "@simplewebauthn/server"
 
 const rpName = "Personal CFO OS"
-const rpID = "localhost"
+// rpID is derived from request URL dynamically
 
 export async function GET(request: Request) {
   const session = await auth()
@@ -23,6 +23,9 @@ export async function GET(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
+
+    const url = new URL(request.url)
+    const rpID = url.hostname
 
     const options = await generateRegistrationOptions({
       rpName,

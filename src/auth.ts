@@ -56,11 +56,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             
             if (!authenticator || !user.currentChallenge) return null
 
-            const verification = await verifyAuthenticationResponse({
-              response: responseJSON,
-              expectedChallenge: user.currentChallenge,
-              expectedOrigin: ["http://localhost:3000", "http://localhost:3001"],
-              expectedRPID: "localhost",
+              const appUrl = new URL(process.env.NEXTAUTH_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
+              const expectedOrigin = appUrl.origin
+              const expectedRPID = appUrl.hostname
+
+              const verification = await verifyAuthenticationResponse({
+                response: responseJSON,
+                expectedChallenge: user.currentChallenge,
+                expectedOrigin: [expectedOrigin, "http://localhost:3000"],
+                expectedRPID,
               authenticator: {
                 credentialID: new Uint8Array(authenticator.credentialID),
                 credentialPublicKey: new Uint8Array(authenticator.credentialPublicKey),
