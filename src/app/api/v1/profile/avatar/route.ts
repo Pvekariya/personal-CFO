@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     // Save to user profile in database
     await prisma.user.update({
       where: { id: userId },
-      data: { image: fileUrl }
+      data: { avatarUrl: fileUrl }
     })
 
     return NextResponse.json({ url: fileUrl })
