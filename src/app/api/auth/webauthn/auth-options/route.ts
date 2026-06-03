@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No biometrics registered" }, { status: 400 })
     }
 
-    const host = request.headers.get("host") || "localhost"
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost"
     const rpID = host.split(":")[0]
 
     const options = await generateAuthenticationOptions({

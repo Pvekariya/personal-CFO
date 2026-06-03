@@ -163,17 +163,35 @@ export default function SettingsPage() {
                       const file = e.target.files?.[0]
                       if (!file) return
                       
-                      const data = new FormData()
-                      data.append("file", file)
-                      
                       try {
-                        const res = await fetch("/api/v1/profile/avatar", {
-                          method: "POST",
-                          body: data
-                        })
-                        const json = await res.json()
-                        if (json.url) {
-                          setFormData({ ...formData, avatarUrl: json.url })
+                        // Compress image on client side to avoid Vercel limits
+                        const reader = new FileReader()
+                        reader.readAsDataURL(file)
+                        reader.onload = (e) => {
+                          const img = new Image()
+                          img.src = e.target?.result as string
+                          img.onload = async () => {
+                            const canvas = document.createElement("canvas")
+                            const maxWidth = 256
+                            const ratio = maxWidth / img.width
+                            canvas.width = maxWidth
+                            canvas.height = img.height * ratio
+                            const ctx = canvas.getContext("2d")
+                            ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+                            const base64 = canvas.toDataURL("image/jpeg", 0.8)
+                            
+                            // Send base64 to standard profile patch endpoint
+                            const res = await fetch("/api/v1/profile", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ avatarUrl: base64 })
+                            })
+                            if (res.ok) {
+                              setFormData({ ...formData, avatarUrl: base64 })
+                            } else {
+                              throw new Error("Failed to save")
+                            }
+                          }
                         }
                       } catch (err) {
                         console.error("Upload failed", err)
