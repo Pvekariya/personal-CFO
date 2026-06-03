@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { useSession } from "next-auth/react"
 
 export default function SettingsPage() {
+  const { update } = useSession()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ text: "", type: "" })
@@ -188,6 +190,7 @@ export default function SettingsPage() {
                             })
                             if (res.ok) {
                               setFormData({ ...formData, avatarUrl: base64 })
+                              await update({ image: base64 })
                             } else {
                               throw new Error("Failed to save")
                             }
@@ -396,14 +399,15 @@ export default function SettingsPage() {
                       try {
                         const { startRegistration } = await import('@simplewebauthn/browser')
                         
-                        const optsRes = await fetch('/api/auth/webauthn/register-options')
+                        const rpID = window.location.hostname
+                        const optsRes = await fetch(`/api/auth/webauthn/register-options?rpID=${rpID}`)
                         const options = await optsRes.json()
                         
                         if (options.error) throw new Error(options.error)
                         
                         const attResp = await startRegistration(options)
                         
-                        const verifyRes = await fetch('/api/auth/webauthn/register-verify', {
+                        const verifyRes = await fetch(`/api/auth/webauthn/register-verify?rpID=${rpID}`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(attResp)

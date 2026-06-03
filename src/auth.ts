@@ -125,11 +125,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.workspaceId = (user as any).workspaceId
         token.role = (user as any).role
         token.onboardingComplete = (user as any).onboardingComplete
+        token.picture = user.image
       }
-
-      // Allow client to update onboardingComplete after finishing onboarding
-      if (trigger === "update" && session?.onboardingComplete !== undefined) {
-        token.onboardingComplete = session.onboardingComplete
+      
+      // Allow client to update session properties
+      if (trigger === "update" && session) {
+        if (session.onboardingComplete !== undefined) token.onboardingComplete = session.onboardingComplete
+        if (session.image !== undefined) token.picture = session.image
       }
 
       return token
