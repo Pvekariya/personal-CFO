@@ -21,9 +21,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Challenge not found" }, { status: 400 })
     }
 
-    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost"
-    const rpID = host.split(":")[0]
-    const protocol = host.includes("localhost") ? "http" : "https"
+    const url = new URL(request.url)
+    const host = url.searchParams.get("rpID") || request.headers.get("x-forwarded-host")?.split(":")[0] || request.headers.get("host")?.split(":")[0] || "localhost"
+    const rpID = host
+    const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https")
     const origin = `${protocol}://${host}`
 
     let verification;
