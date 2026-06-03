@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/db/client"
-import { writeFile } from "fs/promises"
-import path from "path"
 import { DocumentType } from "@/generated/prisma/client"
 
 export async function GET(request: Request) {
@@ -60,13 +58,13 @@ export async function POST(request: Request) {
       if (file && file.size > 0) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
-        const filename = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-        const uploadDir = path.join(process.cwd(), "public/uploads/vault")
-        await writeFile(path.join(uploadDir, filename), buffer)
+        const base64String = buffer.toString("base64")
+        const mime = file.type || "application/pdf"
         
-        fileUrl = `/uploads/vault/${filename}`
+        // Save as base64 data URI directly in DB since Vercel is read-only
+        fileUrl = `data:${mime};base64,${base64String}`
         fileSize = file.size
-        mimeType = file.type
+        mimeType = mime
       } else if (linkUrl) {
         fileUrl = linkUrl
       }

@@ -201,7 +201,7 @@ export default function DocumentVaultPage() {
                     onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
                     className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm"
                   />
-                  <p className="text-[10px] text-muted-foreground">PDF, JPEG, or PNG up to 10MB.</p>
+                  <p className="text-[10px] text-muted-foreground">PDF, JPEG, or PNG up to 4MB.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
