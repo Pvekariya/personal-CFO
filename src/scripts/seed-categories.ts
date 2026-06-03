@@ -11,7 +11,7 @@ import { PrismaClient } from "@/generated/prisma/client"
 import { Pool } from "pg"
 import { PrismaPg } from "@prisma/adapter-pg"
 
-const dbUrl = "postgres://postgres:postgres@localhost:51214/template1?sslmode=disable&connection_limit=10&connect_timeout=0&max_idle_connection_lifetime=0&pool_timeout=0&socket_timeout=0"
+const dbUrl = process.env.DATABASE_URL
 const pool = new Pool({ connectionString: dbUrl })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
