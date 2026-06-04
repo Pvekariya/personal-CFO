@@ -94,12 +94,57 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify category if provided
-    if (data.categoryId) {
+    let finalCategoryId = data.categoryId || null;
+    
+    if (finalCategoryId) {
       const category = await prisma.category.findFirst({
-        where: { id: data.categoryId, workspaceId },
+        where: { id: finalCategoryId, workspaceId },
       })
       if (!category) {
         return apiError("Category not found", 404)
+      }
+    } else if (data.merchant || data.description) {
+      // 🧠 Smart Auto-Categorization Engine
+      const searchString = (data.merchant || data.description || "").toLowerCase()
+      
+      // Attempt 1: Learn from past transactions (Historical matching)
+      const pastTxn = await prisma.transaction.findFirst({
+        where: {
+          workspaceId,
+          categoryId: { not: null },
+          OR: [
+            ...(data.merchant ? [{ merchant: { equals: data.merchant, mode: "insensitive" as const } }] : []),
+            ...(data.description ? [{ description: { equals: data.description, mode: "insensitive" as const } }] : []),
+          ]
+        },
+        orderBy: { date: "desc" }
+      })
+
+      if (pastTxn?.categoryId) {
+        finalCategoryId = pastTxn.categoryId
+      } else {
+        // Attempt 2: Keyword Heuristics
+        const rules: Record<string, string> = {
+          "uber": "Transport", "ola": "Transport", "flight": "Travel", "irctc": "Travel",
+          "swiggy": "Dining", "zomato": "Dining", "restaurant": "Dining", "starbucks": "Dining",
+          "amazon": "Shopping", "flipkart": "Shopping", "myntra": "Shopping",
+          "netflix": "Entertainment", "spotify": "Entertainment", "movie": "Entertainment", "bookmyshow": "Entertainment",
+          "salary": "Salary", "payroll": "Salary", "bonus": "Salary",
+          "d-mart": "Groceries", "blinkit": "Groceries", "zepto": "Groceries", "instamart": "Groceries", "bigbasket": "Groceries",
+          "pharmacy": "Health", "apollo": "Health", "hospital": "Health"
+        }
+
+        for (const [keyword, catName] of Object.entries(rules)) {
+          if (searchString.includes(keyword)) {
+            const cat = await prisma.category.findFirst({
+              where: { workspaceId, name: { equals: catName, mode: "insensitive" } }
+            })
+            if (cat) {
+              finalCategoryId = cat.id
+              break
+            }
+          }
+        }
       }
     }
 
@@ -110,7 +155,7 @@ export async function POST(request: NextRequest) {
         data: {
           workspaceId,
           accountId: data.accountId,
-          categoryId: data.categoryId || null,
+          categoryId: finalCategoryId,
           type: data.type,
           status: "COMPLETED",
           amount: data.amount,

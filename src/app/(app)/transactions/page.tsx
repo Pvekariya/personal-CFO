@@ -63,12 +63,12 @@ const TRANSACTION_TYPES = [
 ]
 
 const TYPE_COLORS: Record<string, string> = {
-  INCOME: "text-green-600",
-  EXPENSE: "text-red-600",
-  TRANSFER: "text-blue-600",
-  INVESTMENT: "text-purple-600",
-  LOAN_REPAYMENT: "text-orange-600",
-  LOAN_DISBURSEMENT: "text-cyan-600",
+  INCOME: "text-emerald-500",
+  EXPENSE: "text-foreground",
+  TRANSFER: "text-blue-500",
+  INVESTMENT: "text-purple-500",
+  LOAN_REPAYMENT: "text-orange-500",
+  LOAN_DISBURSEMENT: "text-cyan-500",
 }
 
 
@@ -395,275 +395,238 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Add Form */}
+      {/* Zero-Friction Entry Form */}
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-3xl border border-white/10 bg-card/60 backdrop-blur-xl p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-500"
+          className="rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-xl p-4 shadow-inner animate-in fade-in slide-in-from-top-4 duration-300 relative z-10"
         >
-          <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">Record Transaction</h3>
-
           {formError && (
-            <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive mb-3">
               {formError}
             </div>
           )}
 
           {accounts.length === 0 ? (
             <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-              You need to{" "}
-              <a href="/accounts" className="underline font-medium">
-                add an account
-              </a>{" "}
-              before recording transactions.
+              You need to <a href="/accounts" className="underline font-medium text-primary">add an account</a> before recording transactions.
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Type *</label>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col md:flex-row gap-3 items-end">
+                {/* AMOUNT & TYPE */}
+                <div className="flex bg-background rounded-xl border border-input/60 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/40 transition-all w-full md:w-1/4 h-12">
                   <select
                     value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value, categoryId: "" })
-                    }
-                    className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value, categoryId: "" })}
+                    className="h-full bg-transparent border-r border-border pl-3 pr-8 text-sm font-bold text-muted-foreground outline-none cursor-pointer hover:bg-muted/50 transition-colors"
                   >
-                    {TRANSACTION_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t.replace(/_/g, " ")}
-                      </option>
-                    ))}
+                    <option value="EXPENSE">EXP</option>
+                    <option value="INCOME">INC</option>
+                    <option value="TRANSFER">TRF</option>
+                    <option value="INVESTMENT">INV</option>
+                    <option value="LOAN_REPAYMENT">REP</option>
                   </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground/90 pl-1">Amount (₹) *</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.amount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amount: e.target.value })
-                    }
-                    placeholder="e.g. 500"
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    placeholder="0.00"
                     required
-                    className={`flex h-12 w-full rounded-2xl border ${fieldErrors.amount ? 'border-destructive' : 'border-input/60'} bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
+                    className={`h-full w-full bg-transparent px-3 text-lg font-extrabold outline-none ${formData.type === 'INCOME' ? 'text-emerald-500' : 'text-foreground'}`}
                   />
-                  {fieldErrors.amount && <p className="text-xs text-destructive pl-1">{fieldErrors.amount}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground/90 pl-1">Date *</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date: e.target.value })
-                    }
-                    required
-                    className={`flex h-12 w-full rounded-2xl border ${fieldErrors.date ? 'border-destructive' : 'border-input/60'} bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
-                  />
-                  {fieldErrors.date && <p className="text-xs text-destructive pl-1">{fieldErrors.date}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground/90 pl-1">Account *</label>
-                  <select
-                    value={formData.accountId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, accountId: e.target.value })
-                    }
-                    required
-                    className={`flex h-12 w-full rounded-2xl border ${fieldErrors.accountId ? 'border-destructive' : 'border-input/60'} bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
-                  >
-                    <option value="">Select account</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.accountId && <p className="text-xs text-destructive pl-1">{fieldErrors.accountId}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, categoryId: e.target.value })
-                    }
-                    className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <option value="">Uncategorized</option>
-                    {filteredCategories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.icon} {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Merchant</label>
+                {/* DESCRIPTION */}
+                <div className="w-full md:w-2/5">
                   <input
                     type="text"
-                    value={formData.merchant}
-                    onChange={(e) =>
-                      setFormData({ ...formData, merchant: e.target.value })
-                    }
-                    placeholder="e.g. Amazon, Swiggy"
-                    className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="What was this for? (e.g. Swiggy lunch)"
+                    className="flex h-12 w-full rounded-xl border border-input/60 bg-background px-4 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 hover:bg-background/80"
                   />
                 </div>
-              </div>
 
-              {(formData.type === "INVESTMENT" || formData.type === "LOAN_REPAYMENT") && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {formData.type === "INVESTMENT" && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-purple-600">Link to Investment Asset (Optional)</label>
-                      <select
-                        value={formData.linkedAssetId}
-                        onChange={(e) =>
-                          setFormData({ ...formData, linkedAssetId: e.target.value })
-                        }
-                        className="flex h-9 w-full rounded-lg border border-purple-200 bg-purple-50/30 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500"
-                      >
-                        <option value="">Do not link</option>
-                        {assets.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name} ({a.type.replace(/_/g, " ")})
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[10px] text-muted-foreground">This will automatically increase your asset's invested amount.</p>
-                    </div>
-                  )}
-
-                  {formData.type === "LOAN_REPAYMENT" && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-orange-600">Link to Liability (Optional)</label>
-                      <select
-                        value={formData.linkedLiabilityId}
-                        onChange={(e) =>
-                          setFormData({ ...formData, linkedLiabilityId: e.target.value })
-                        }
-                        className="flex h-9 w-full rounded-lg border border-orange-200 bg-orange-50/30 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
-                      >
-                        <option value="">Do not link</option>
-                        {liabilities.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[10px] text-muted-foreground">This will automatically reduce the outstanding balance of the loan.</p>
-                    </div>
-                  )}
+                {/* ACCOUNT */}
+                <div className="w-full md:w-1/5">
+                  <select
+                    value={formData.accountId}
+                    onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                    required
+                    className="flex h-12 w-full rounded-xl border border-input/60 bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
+                  >
+                    <option value="">Account</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-foreground/90 pl-1">Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="What was this for?"
-                  className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 hover:bg-background/80"
-                />
+                {/* SUBMIT */}
+                <div className="w-full md:w-auto flex gap-2">
+                  <Button type="submit" disabled={saving} className="h-12 px-6 rounded-xl font-bold shadow-md hover:-translate-y-0.5 transition-all w-full md:w-auto">
+                    {saving ? "..." : "Save"}
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button type="submit" disabled={saving} className="h-12 px-8 rounded-2xl font-bold shadow-lg hover:-translate-y-0.5 transition-all">
-                  {saving ? "Saving..." : "Add Transaction"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 px-8 rounded-2xl font-bold transition-all"
-                  onClick={() => {
-                    setShowForm(false)
-                    resetForm()
-                  }}
+              {/* SECONDARY ROW (Category, Merchant, Linkages) */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  className="flex h-9 w-full md:w-48 rounded-lg border border-input/40 bg-background/50 px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 >
-                  Cancel
-                </Button>
+                  <option value="">Uncategorized</option>
+                  {filteredCategories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                  ))}
+                </select>
+                
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  required
+                  className="flex h-9 w-full md:w-40 rounded-lg border border-input/40 bg-background/50 px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                />
+
+                {(formData.type === "INVESTMENT" || formData.type === "LOAN_REPAYMENT") && (
+                  <select
+                    value={formData.type === "INVESTMENT" ? formData.linkedAssetId : formData.linkedLiabilityId}
+                    onChange={(e) => {
+                      if (formData.type === "INVESTMENT") setFormData({ ...formData, linkedAssetId: e.target.value })
+                      else setFormData({ ...formData, linkedLiabilityId: e.target.value })
+                    }}
+                    className={`flex h-9 w-full md:w-64 rounded-lg border px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 ${formData.type === 'INVESTMENT' ? 'border-purple-200 bg-purple-50/10 focus-visible:ring-purple-500' : 'border-orange-200 bg-orange-50/10 focus-visible:ring-orange-500'}`}
+                  >
+                    <option value="">Do not link</option>
+                    {formData.type === "INVESTMENT" 
+                      ? assets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)
+                      : liabilities.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)
+                    }
+                  </select>
+                )}
               </div>
-            </>
+            </div>
           )}
         </form>
       )}
 
-      {/* Transaction List */}
+      {/* Transaction List (Daybook Format) */}
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        </div>
       ) : transactions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg">No transactions yet</p>
-          <p className="text-sm mt-1">
-            Record your first transaction to start tracking
+        <div className="text-center py-16 bg-card/30 rounded-3xl border border-border/50 border-dashed backdrop-blur-sm">
+          <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <img src="https://img.icons8.com/ios/50/receipt.png" alt="No transactions" className="w-8 h-8 dark:invert opacity-70" />
+          </div>
+          <p className="text-xl font-semibold">No transactions found</p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
+            Your daybook is empty for this period. Record a transaction to start tracking your cash flow.
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {transactions.map((txn) => (
-            <div
-              key={txn.id}
-              className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:shadow-sm transition-shadow"
-            >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Category icon */}
-                <span className="text-xl flex-shrink-0">
-                  {txn.category?.icon || "📝"}
-                </span>
+        <div className="space-y-8 mt-4">
+          {Object.entries(
+            transactions.reduce((acc, txn) => {
+              const dateStr = new Date(txn.date).toLocaleDateString(undefined, {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+              if (!acc[dateStr]) acc[dateStr] = []
+              acc[dateStr].push(txn)
+              return acc
+            }, {} as Record<string, Transaction[]>)
+          ).map(([dateStr, dailyTxns]) => {
+            const dailyTotal = dailyTxns.reduce((sum, t) => {
+              const amt = Number(t.amount)
+              return t.type === "INCOME" || t.type === "LOAN_DISBURSEMENT" ? sum + amt : sum - amt
+            }, 0)
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm truncate">
-                      {txn.description || txn.merchant || txn.category?.name || "Untitled"}
-                    </p>
-                    <span
-                      className={`text-xs px-1.5 py-0.5 rounded ${TYPE_COLORS[txn.type] || ""} bg-muted`}
+            return (
+              <div key={dateStr} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-3 pl-2">
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{dateStr}</h3>
+                  <span className={`text-sm font-bold ${dailyTotal >= 0 ? "text-emerald-500" : "text-foreground"}`}>
+                    {dailyTotal > 0 ? "+" : ""}{formatCurrency(dailyTotal)}
+                  </span>
+                </div>
+                
+                <div className="bg-card/40 backdrop-blur-md rounded-2xl border border-border/50 shadow-sm overflow-hidden divide-y divide-border/30">
+                  {dailyTxns.map((txn) => (
+                    <div
+                      key={txn.id}
+                      className="group flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
                     >
-                      {txn.type.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {formatDate(txn.date)} · {txn.account.name}
-                    {txn.category ? ` · ${txn.category.name}` : ""}
-                  </p>
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner border border-border/40">
+                          {txn.category?.icon || "💸"}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-semibold text-base text-foreground/90 truncate">
+                              {txn.description || txn.merchant || txn.category?.name || "Untitled"}
+                            </p>
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${TYPE_COLORS[txn.type] || ""} bg-background border border-border/50`}
+                            >
+                              {txn.type.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <span>{txn.account.name}</span>
+                            {txn.category && (
+                              <>
+                                <span className="w-1 h-1 rounded-full bg-border" />
+                                <span>{txn.category.name}</span>
+                              </>
+                            )}
+                            {txn.merchant && (
+                              <>
+                                <span className="w-1 h-1 rounded-full bg-border" />
+                                <span>{txn.merchant}</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <p
+                          className={`font-extrabold text-lg tracking-tight ${
+                            txn.type === "INCOME" || txn.type === "LOAN_DISBURSEMENT"
+                              ? "text-emerald-500"
+                              : "text-foreground/90"
+                          }`}
+                        >
+                          {txn.type === "INCOME" || txn.type === "LOAN_DISBURSEMENT"
+                            ? "+"
+                            : "−"}
+                          {formatCurrency(txn.amount)}
+                        </p>
+                        <button
+                          onClick={() => handleDelete(txn.id)}
+                          className="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                          title="Delete Transaction"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
+            )
+          })}
 
-              <div className="flex items-center gap-4 flex-shrink-0">
-                <p
-                  className={`font-semibold text-sm ${
-                    txn.type === "INCOME" || txn.type === "LOAN_DISBURSEMENT"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {txn.type === "INCOME" || txn.type === "LOAN_DISBURSEMENT"
-                    ? "+"
-                    : "−"}
-                  {formatCurrency(txn.amount)}
-                </p>
-                <button
-                  onClick={() => handleDelete(txn.id)}
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
 
           {/* Pagination */}
           {meta && meta.totalPages > 1 && (
