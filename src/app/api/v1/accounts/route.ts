@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
         bankName: data.bankName,
         accountNumber: data.accountNumber,
         ifscCode: data.ifscCode || null,
+        upiId: data.upiId || null,
         balance: data.balance,
         currency: data.currency,
         isDefault: data.isDefault,

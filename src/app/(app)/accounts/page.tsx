@@ -9,6 +9,9 @@ type Account = {
   name: string
   type: string
   bankName: string | null
+  accountNumber: string | null
+  ifscCode: string | null
+  upiId: string | null
   balance: string // Decimal comes as string
   currency: string
   isDefault: boolean
@@ -48,6 +51,7 @@ export default function AccountsPage() {
     bankName: "",
     accountNumber: "",
     ifscCode: "",
+    upiId: "",
     balance: "",
     isDefault: false,
     notes: "",
@@ -78,6 +82,7 @@ export default function AccountsPage() {
       bankName: "",
       accountNumber: "",
       ifscCode: "",
+      upiId: "",
       balance: "",
       isDefault: false,
       notes: "",
@@ -91,8 +96,9 @@ export default function AccountsPage() {
       name: account.name,
       type: account.type,
       bankName: account.bankName || "",
-      accountNumber: "",
-      ifscCode: "",
+      accountNumber: account.accountNumber || "",
+      ifscCode: account.ifscCode || "",
+      upiId: account.upiId || "",
       balance: account.balance,
       isDefault: account.isDefault,
       notes: account.notes || "",
@@ -247,6 +253,45 @@ export default function AccountsPage() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Account Number</label>
+              <input
+                type="text"
+                value={formData.accountNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, accountNumber: e.target.value })
+                }
+                placeholder="e.g. 50100XXXXXXX"
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">IFSC Code</label>
+              <input
+                type="text"
+                value={formData.ifscCode}
+                onChange={(e) =>
+                  setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })
+                }
+                placeholder="e.g. HDFC0001234"
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">UPI ID</label>
+              <input
+                type="text"
+                value={formData.upiId}
+                onChange={(e) =>
+                  setFormData({ ...formData, upiId: e.target.value })
+                }
+                placeholder="e.g. user@okhdfc"
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Current Balance (₹)</label>
               <input
                 type="number"
@@ -341,7 +386,15 @@ export default function AccountsPage() {
                     <p className="text-xs text-muted-foreground mt-1 font-medium">
                       {ACCOUNT_TYPE_LABELS[account.type] || account.type}
                       {account.bankName ? ` · ${account.bankName}` : ""}
+                      {account.accountNumber ? ` · ${account.accountNumber.slice(-4)}` : ""}
                     </p>
+                    {(account.ifscCode || account.upiId) && (
+                      <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                        {account.ifscCode ? `IFSC: ${account.ifscCode}` : ""}
+                        {account.ifscCode && account.upiId ? " | " : ""}
+                        {account.upiId ? `UPI: ${account.upiId}` : ""}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <p className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">

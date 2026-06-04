@@ -30,12 +30,9 @@ export const createAccountSchema = z.object({
   name: z.string().min(1, "Account name is required").max(100),
   type: z.enum(accountTypes),
   bankName: z.string().max(100).optional(),
-  accountNumber: z.string().max(50).optional(),
-  ifscCode: z
-    .string()
-    .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code")
-    .optional()
-    .or(z.literal("")),
+  accountNumber: z.string().max(50).optional().or(z.literal("")),
+  ifscCode: z.string().max(20).optional().or(z.literal("")),
+  upiId: z.string().max(100).optional().or(z.literal("")),
   balance: z.coerce.number().default(0),
   currency: z.enum(currencyCodes).default("INR"),
   isDefault: z.boolean().default(false),

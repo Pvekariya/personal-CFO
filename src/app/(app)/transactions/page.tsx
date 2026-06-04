@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { createTransactionSchema } from "@/lib/validations/transactions"
+import { StatementImporter } from "@/components/shared/StatementImporter"
 
 type Category = {
   id: string
@@ -83,6 +84,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showImporter, setShowImporter] = useState(false)
   const [formError, setFormError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -315,14 +317,24 @@ export default function TransactionsPage() {
             Track your income, expenses, and transfers
           </p>
         </div>
-        <Button
-          onClick={() => {
-            if (!showForm) resetForm()
-            setShowForm(!showForm)
-          }}
-        >
-          {showForm ? "Cancel" : "+ Add Transaction"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            className="hidden sm:flex gap-2"
+            onClick={() => setShowImporter(true)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            Upload Statement
+          </Button>
+          <Button
+            onClick={() => {
+              if (!showForm) resetForm()
+              setShowForm(!showForm)
+            }}
+          >
+            {showForm ? "Cancel" : "+ Add Transaction"}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -630,33 +642,35 @@ export default function TransactionsPage() {
 
           {/* Pagination */}
           {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-4">
+            <div className="flex justify-center gap-2 mt-8">
               <Button
                 variant="outline"
-                size="sm"
-                disabled={filters.page <= 1}
-                onClick={() =>
-                  setFilters({ ...filters, page: filters.page - 1 })
-                }
+                disabled={filters.page === 1}
+                onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
               >
                 Previous
               </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {meta.page} of {meta.totalPages}
-              </span>
               <Button
                 variant="outline"
-                size="sm"
-                disabled={!meta.hasMore}
-                onClick={() =>
-                  setFilters({ ...filters, page: filters.page + 1 })
-                }
+                disabled={filters.page === meta.totalPages}
+                onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
               >
                 Next
               </Button>
             </div>
           )}
         </div>
+      )}
+
+      {showImporter && (
+        <StatementImporter
+          accounts={accounts}
+          onClose={() => setShowImporter(false)}
+          onSuccess={() => {
+            setShowImporter(false)
+            fetchTransactions()
+          }}
+        />
       )}
     </div>
   )

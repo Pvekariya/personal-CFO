@@ -84,6 +84,9 @@ export async function PATCH(
         ...(data.ifscCode !== undefined && {
           ifscCode: data.ifscCode || null,
         }),
+        ...(data.upiId !== undefined && {
+          upiId: data.upiId || null,
+        }),
         ...(data.balance !== undefined && { balance: data.balance }),
         ...(data.currency !== undefined && { currency: data.currency }),
         ...(data.isDefault !== undefined && { isDefault: data.isDefault }),

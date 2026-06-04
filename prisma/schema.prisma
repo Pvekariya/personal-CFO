@@ -396,6 +396,7 @@ model Account {
   bankName      String?
   accountNumber String?      // Encrypted; display masked
   ifscCode      String?
+  upiId         String?
   balance       Decimal      @db.Decimal(15, 2) @default(0)
   currency      CurrencyCode @default(INR)
   isDefault     Boolean      @default(false)
