@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { createTransactionSchema } from "@/lib/validations/transactions"
 import { StatementImporter } from "@/components/shared/StatementImporter"
+import { DaybookInsights } from "@/components/shared/DaybookInsights"
 
 type Category = {
   id: string
@@ -121,6 +122,7 @@ export default function TransactionsPage() {
     tags: "",
     linkedAssetId: "",
     linkedLiabilityId: "",
+    isRecurring: false,
   })
 
   const fetchTransactions = useCallback(async () => {
@@ -215,6 +217,7 @@ export default function TransactionsPage() {
       tags: "",
       linkedAssetId: "",
       linkedLiabilityId: "",
+      isRecurring: false,
     })
     setFormError("")
     setFieldErrors({})
@@ -238,6 +241,7 @@ export default function TransactionsPage() {
         description: formData.description || undefined,
         merchant: formData.merchant || undefined,
         tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
+        isRecurring: formData.isRecurring,
       }
 
       // Run robust Zod validation
@@ -336,6 +340,9 @@ export default function TransactionsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Daybook Insights Panel (Budgets & Recurring Engine) */}
+      {!showForm && <DaybookInsights />}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
@@ -521,6 +528,20 @@ export default function TransactionsPage() {
                     }
                   </select>
                 )}
+              </div>
+
+              {/* IS RECURRING TOGGLE */}
+              <div className="flex items-center gap-2 px-1">
+                <input
+                  type="checkbox"
+                  id="isRecurring"
+                  checked={formData.isRecurring}
+                  onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+                  className="w-4 h-4 rounded border-input/60 accent-primary"
+                />
+                <label htmlFor="isRecurring" className="text-xs font-semibold text-muted-foreground cursor-pointer">
+                  Mark as recurring (subscription/bill/SIP)
+                </label>
               </div>
             </div>
           )}
