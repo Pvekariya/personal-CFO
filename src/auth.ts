@@ -4,6 +4,12 @@ import { prisma } from "@/lib/db/client"
 import bcrypt from "bcryptjs"
 import { loginSchema } from "@/lib/validations/auth"
 
+// Force correct URLs on Vercel deployments, ignoring bad environment variables
+if (process.env.VERCEL_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+  const url = \`https://\${process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL}\`
+  process.env.AUTH_URL = url
+  process.env.NEXTAUTH_URL = url
+}
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
