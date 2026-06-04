@@ -19,23 +19,21 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const payload: any = {
+      const result: any = await signIn("credentials", {
         email,
         password,
-        redirect: false,
-      }
-
-      const result: any = await signIn("credentials", payload)
+        redirect: false, // Wait, if I use redirect: true, it will reload the page on error too. I should keep redirect: false but do window.location.href instead of router.push
+      })
 
       if (result?.error) {
         setError(`Login failed: ${result.error}`)
+        setLoading(false)
       } else {
-        router.push("/")
-        router.refresh()
+        // Use a hard reload instead of router.push to ensure cookies are sent
+        window.location.href = "/"
       }
     } catch {
       setError("Something went wrong. Please try again.")
-    } finally {
       setLoading(false)
     }
   }

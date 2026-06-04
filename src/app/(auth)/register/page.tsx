@@ -52,10 +52,10 @@ export default function RegisterPage() {
 
       if (signInResult?.error) {
         setError("Account created but sign-in failed. Please log in manually.")
-        router.push("/login")
+        // Don't push to login, just show the error and let them click it
+        setLoading(false)
       } else {
-        router.push("/onboarding/profile")
-        router.refresh()
+        window.location.href = "/onboarding/profile"
       }
     } catch {
       setError("Something went wrong. Please try again.")
