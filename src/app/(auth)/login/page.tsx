@@ -19,48 +19,71 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // 1. Check if the user has biometrics enabled
-      let webauthnResponse = null
-      try {
-        const resOpts = await fetch("/api/auth/webauthn/auth-options", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        })
-        const options = await resOpts.json()
-
-        // If they have options, trigger the biometric prompt!
-        if (!options.error && options.challenge) {
-          const { startAuthentication } = await import('@simplewebauthn/browser')
-          const authResp = await startAuthentication(options)
-          webauthnResponse = JSON.stringify(authResp)
-        }
-      } catch (biometricErr) {
-        console.log("Biometric check/prompt bypassed or failed:", biometricErr)
-        // Fall back to standard password login if they cancel or it fails
-      }
-
-      // 2. Perform the actual signIn
       const payload: any = {
         email,
         password,
         redirect: false,
       }
 
-      if (webauthnResponse) {
-        payload.webauthnResponse = webauthnResponse
-      }
-
       const result: any = await signIn("credentials", payload)
 
       if (result?.error) {
-        setError("Invalid email, password, or biometric signature.")
+        setError("Invalid email or password.")
       } else {
         router.push("/")
         router.refresh()
       }
     } catch {
       setError("Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleBiometricLogin() {
+    if (!email) {
+      setError("Please enter your email first to use biometrics.")
+      return
+    }
+    setError("")
+    
+    try {
+      // 1. Check if the user has biometrics enabled
+      const resOpts = await fetch("/api/auth/webauthn/auth-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      })
+      const options = await resOpts.json()
+
+      if (options.error || !options.challenge) {
+        setError("No biometric passkeys found for this email.")
+        return
+      }
+
+      // 2. Trigger biometric
+      const { startAuthentication } = await import('@simplewebauthn/browser')
+      const authResp = await startAuthentication(options)
+      
+      setLoading(true)
+      
+      // 3. Login with biometric
+      const result: any = await signIn("credentials", {
+        email,
+        password: "biometric_login", // placeholder
+        webauthnResponse: JSON.stringify(authResp),
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Biometric signature failed validation.")
+      } else {
+        router.push("/")
+        router.refresh()
+      }
+    } catch (biometricErr) {
+      console.log("Biometric failed:", biometricErr)
+      // Usually because they canceled it
     } finally {
       setLoading(false)
     }
@@ -122,9 +145,19 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
+        <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both space-y-3">
           <Button type="submit" className="w-full h-12 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0" disabled={loading}>
             {loading ? "Authenticating..." : "Sign in securely"}
+          </Button>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full h-12 rounded-2xl text-base font-bold transition-all hover:-translate-y-0.5" 
+            onClick={handleBiometricLogin}
+            disabled={loading}
+          >
+            Use Passkey / Biometrics
           </Button>
         </div>
       </form>

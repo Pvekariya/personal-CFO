@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
   const router = useRouter()
   
   const [step, setStep] = useState<1 | 2>(1)
-  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
   const [otp, setOtp] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       })
       
       const data = await res.json()
@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
       const res = await fetch("/api/auth/forgot-password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp, newPassword }),
+        body: JSON.stringify({ email, otp, newPassword }),
       })
       
       const data = await res.json()
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Reset Password</h1>
         <p className="text-muted-foreground text-sm">
-          {step === 1 ? "Enter your phone number to receive an OTP." : "Enter the OTP sent to your phone."}
+          {step === 1 ? "Enter your email address to receive an OTP." : "Enter the OTP sent to your email."}
         </p>
       </div>
 
@@ -96,19 +96,19 @@ export default function ForgotPasswordPage() {
           {success && <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600">{success}</div>}
 
           <div className="space-y-2">
-            <label htmlFor="phone" className="text-sm font-medium">Phone Number</label>
+            <label htmlFor="email" className="text-sm font-medium">Email Address</label>
             <input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. +919876543210"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. john@example.com"
               required
               className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading || !phone}>
+          <Button type="submit" className="w-full" disabled={loading || !email}>
             {loading ? "Sending OTP..." : "Send OTP"}
           </Button>
         </form>

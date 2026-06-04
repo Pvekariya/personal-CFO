@@ -4,13 +4,13 @@ import bcrypt from "bcryptjs"
 
 export async function POST(request: Request) {
   try {
-    const { phone } = await request.json()
-    if (!phone) {
-      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
+    const { email } = await request.json()
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { phone }
+      where: { email }
     })
 
     if (!user) {
@@ -33,13 +33,13 @@ export async function POST(request: Request) {
       }
     })
 
-    // In a real application, we would send this via SMS (Twilio, SNS, etc.)
-    // For this MVP, we will simulate it by returning it in dev or printing it.
-    console.log(`[SMS MOCK] OTP for ${phone} is: ${otp}`)
+    // In a real application, we would send this via Email (Resend, SendGrid, etc.)
+    // For this MVP, we will simulate it by returning it to the user.
+    console.log(`[EMAIL MOCK] OTP for ${email} is: ${otp}`)
 
     return NextResponse.json({ 
       success: true, 
-      message: "OTP sent successfully! (Check console for mock SMS)" 
+      message: `OTP sent successfully! (MOCK OTP: ${otp})` 
     })
   } catch (error: any) {
     console.error("Forgot password send error:", error)
@@ -49,14 +49,14 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { phone, otp, newPassword } = await request.json()
+    const { email, otp, newPassword } = await request.json()
     
-    if (!phone || !otp || !newPassword) {
-      return NextResponse.json({ error: "Phone, OTP, and new password are required" }, { status: 400 })
+    if (!email || !otp || !newPassword) {
+      return NextResponse.json({ error: "Email, OTP, and new password are required" }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { phone }
+      where: { email }
     })
 
     if (!user) {
