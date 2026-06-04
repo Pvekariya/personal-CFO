@@ -10,6 +10,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ text: "", type: "" })
   
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+  const [passwordMessage, setPasswordMessage] = useState({ text: "", type: "" })
+  const [savingPassword, setSavingPassword] = useState(false)
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -118,6 +126,41 @@ export default function SettingsPage() {
     } finally {
       setSaving(false)
       setTimeout(() => setMessage({ text: "", type: "" }), 5000)
+    }
+  }
+
+  async function handlePasswordChange(e: React.FormEvent) {
+    e.preventDefault()
+    setPasswordMessage({ text: "", type: "" })
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordMessage({ text: "New passwords do not match", type: "error" })
+      return
+    }
+
+    setSavingPassword(true)
+    try {
+      const res = await fetch("/api/v1/profile/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setPasswordMessage({ text: "Password changed successfully!", type: "success" })
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+      } else {
+        setPasswordMessage({ text: data.error || "Failed to change password", type: "error" })
+      }
+    } catch (err) {
+      setPasswordMessage({ text: "An error occurred", type: "error" })
+    } finally {
+      setSavingPassword(false)
+      setTimeout(() => setPasswordMessage({ text: "", type: "" }), 5000)
     }
   }
 
@@ -460,6 +503,69 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Change Password Section */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden mt-8">
+        <div className="border-b border-border bg-muted/30 px-6 py-4">
+          <h2 className="font-semibold text-lg">Change Password</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Update your password or replace your temporary password.
+          </p>
+        </div>
+        <form onSubmit={handlePasswordChange} className="p-6 space-y-6">
+          {passwordMessage.text && (
+            <div className={`p-4 rounded-lg text-sm font-medium ${passwordMessage.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
+              {passwordMessage.text}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium">Current Password (or Temporary Password)</label>
+              <input
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">New Password</label>
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40"
+                placeholder="••••••••"
+                required
+                minLength={8}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Confirm New Password</label>
+              <input
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40"
+                placeholder="••••••••"
+                required
+                minLength={8}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button type="submit" variant="default" disabled={savingPassword}>
+              {savingPassword ? "Updating..." : "Update Password"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

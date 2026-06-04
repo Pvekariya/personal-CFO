@@ -15,66 +15,13 @@ export async function POST(request: Request) {
 
     if (!user) {
       // Return success anyway to prevent user enumeration
-      return NextResponse.json({ success: true, message: "If this number is registered, an OTP will be sent." })
+      return NextResponse.json({ success: true, message: "If this email is registered, a temporary password will be sent." })
     }
 
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
-    
-    // Set expiry to 10 minutes from now
-    const expiry = new Date()
-    expiry.setMinutes(expiry.getMinutes() + 10)
+    // Generate an 8-character temporary password
+    const tempPassword = Math.random().toString(36).slice(-8)
+    const passwordHash = await bcrypt.hash(tempPassword, 10)
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetOtp: otp,
-        resetOtpExpiry: expiry
-      }
-    })
-
-    // In a real application, we would send this via Email (Resend, SendGrid, etc.)
-    // For this MVP, we will simulate it by returning it to the user.
-    console.log(`[EMAIL MOCK] OTP for ${email} is: ${otp}`)
-
-    return NextResponse.json({ 
-      success: true, 
-      message: `OTP sent successfully! (MOCK OTP: ${otp})` 
-    })
-  } catch (error: any) {
-    console.error("Forgot password send error:", error)
-    return NextResponse.json({ error: "Failed to process request" }, { status: 500 })
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    const { email, otp, newPassword } = await request.json()
-    
-    if (!email || !otp || !newPassword) {
-      return NextResponse.json({ error: "Email, OTP, and new password are required" }, { status: 400 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 })
-    }
-
-    if (user.resetOtp !== otp) {
-      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 })
-    }
-
-    if (!user.resetOtpExpiry || user.resetOtpExpiry < new Date()) {
-      return NextResponse.json({ error: "OTP has expired" }, { status: 400 })
-    }
-
-    // Hash the new password
-    const passwordHash = await bcrypt.hash(newPassword, 10)
-
-    // Update user and clear OTP
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -84,9 +31,15 @@ export async function PUT(request: Request) {
       }
     })
 
-    return NextResponse.json({ success: true, message: "Password updated successfully" })
+    // In a real application, we would send this via Email (Resend, SendGrid, etc.)
+    console.log(`[EMAIL MOCK] Temporary password for ${email} is: ${tempPassword}`)
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Temporary password sent! (MOCK EMAIL: Your new temporary password is: ${tempPassword})` 
+    })
   } catch (error: any) {
-    console.error("Forgot password verify error:", error)
-    return NextResponse.json({ error: "Failed to reset password" }, { status: 500 })
+    console.error("Forgot password send error:", error)
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 })
   }
 }

@@ -8,17 +8,12 @@ import { Button } from "@/components/ui/button"
 export default function ForgotPasswordPage() {
   const router = useRouter()
   
-  const [step, setStep] = useState<1 | 2>(1)
   const [email, setEmail] = useState("")
-  const [otp, setOtp] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [loading, setLoading] = useState(false)
 
-  async function handleSendOtp(e: React.FormEvent) {
+  async function handleSendTempPassword(e: React.FormEvent) {
     e.preventDefault()
     setError("")
     setSuccess("")
@@ -34,45 +29,9 @@ export default function ForgotPasswordPage() {
       const data = await res.json()
       
       if (!res.ok) {
-        setError(data.error || "Failed to send OTP")
-      } else {
-        setSuccess(data.message)
-        setStep(2) // Move to OTP verification step
-      }
-    } catch {
-      setError("Something went wrong. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleResetPassword(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    setSuccess("")
-    
-    if (newPassword !== confirmPassword) {
-      return setError("Passwords do not match")
-    }
-    
-    setLoading(true)
-
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp, newPassword }),
-      })
-      
-      const data = await res.json()
-      
-      if (!res.ok) {
         setError(data.error || "Failed to reset password")
       } else {
-        setSuccess("Password reset successfully! Redirecting to login...")
-        setTimeout(() => {
-          router.push("/login")
-        }, 2000)
+        setSuccess(data.message)
       }
     } catch {
       setError("Something went wrong. Please try again.")
@@ -86,86 +45,31 @@ export default function ForgotPasswordPage() {
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Reset Password</h1>
         <p className="text-muted-foreground text-sm">
-          {step === 1 ? "Enter your email address to receive an OTP." : "Enter the OTP sent to your email."}
+          Enter your email address to receive a temporary password.
         </p>
       </div>
 
-      {step === 1 ? (
-        <form onSubmit={handleSendOtp} className="space-y-4">
-          {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-          {success && <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600">{success}</div>}
+      <form onSubmit={handleSendTempPassword} className="space-y-4">
+        {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+        {success && <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600">{success}</div>}
 
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">Email Address</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. john@example.com"
-              required
-              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-            />
-          </div>
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium">Email Address</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="e.g. john@example.com"
+            required
+            className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+          />
+        </div>
 
-          <Button type="submit" className="w-full" disabled={loading || !email}>
-            {loading ? "Sending OTP..." : "Send OTP"}
-          </Button>
-        </form>
-      ) : (
-        <form onSubmit={handleResetPassword} className="space-y-4">
-          {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-          {success && <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600">{success}</div>}
-
-          <div className="space-y-2">
-            <label htmlFor="otp" className="text-sm font-medium">OTP Code</label>
-            <input
-              id="otp"
-              type="text"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="e.g. 123456"
-              required
-              maxLength={6}
-              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors text-center tracking-widest placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="newPassword" className="text-sm font-medium">New Password</label>
-            <input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm New Password</label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={loading || !otp || !newPassword || !confirmPassword}>
-            {loading ? "Resetting Password..." : "Reset Password"}
-          </Button>
-          
-          <Button type="button" variant="ghost" className="w-full text-xs" onClick={() => setStep(1)}>
-            Did not receive OTP? Resend
-          </Button>
-        </form>
-      )}
+        <Button type="submit" className="w-full" disabled={loading || !email}>
+          {loading ? "Resetting..." : "Get Temporary Password"}
+        </Button>
+      </form>
 
       <p className="text-center text-sm text-muted-foreground">
         Remembered your password?{" "}
