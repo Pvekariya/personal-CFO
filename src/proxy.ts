@@ -1,10 +1,9 @@
 // Next.js 16: middleware.ts is renamed to proxy.ts
-// The export function is also renamed from `middleware` to `proxy`
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 // Public routes that don't require authentication
-const publicRoutes = ["/login", "/register", "/api/auth"]
+const publicRoutes = ["/login", "/register", "/forgot-password", "/api/auth"]
 
 function isPublicRoute(pathname: string): boolean {
   return publicRoutes.some(
@@ -15,12 +14,13 @@ function isPublicRoute(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow public routes
+  // Allow public routes and static assets
   if (isPublicRoute(pathname)) {
     return NextResponse.next()
   }
 
-  // Check for session token (NextAuth v5 uses __Secure- prefix in production)
+  // Check for session token
+  // Auth.js v5 uses "authjs.session-token" in dev and "__Secure-authjs.session-token" in production (HTTPS)
   const token =
     request.cookies.get("__Secure-authjs.session-token")?.value ||
     request.cookies.get("authjs.session-token")?.value
@@ -37,7 +37,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all routes except static files, _next, and api/auth
+    // Match all routes except static files and _next internals
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

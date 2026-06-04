@@ -2,27 +2,23 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db/client"
 import bcrypt from "bcryptjs"
-import { loginSchema } from "@/lib/validations/auth"
 
-// Force NextAuth to use request headers (trustHost) instead of potentially bad environment variables or internal Vercel overrides
-if (process.env.VERCEL) {
-  delete process.env.NEXTAUTH_URL
-  delete process.env.AUTH_URL
-  delete process.env.VERCEL_URL
-  delete process.env.VERCEL_PROJECT_PRODUCTION_URL
-}
-const { handlers, signIn, signOut, auth: nextAuthSession } = NextAuth({
-  secret: process.env.AUTH_SECRET || "fallback-secret-key-for-personal-cfo-os-change-in-production",
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        webauthnResponse: { label: "WebAuthn Response", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email) return null
+        if (!credentials?.email || !credentials?.password) return null
+
         const email = (credentials.email as string).toLowerCase().trim()
+        const password = credentials.password as string
+
+        if (password.length < 8) return null
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -32,20 +28,12 @@ const { handlers, signIn, signOut, auth: nextAuthSession } = NextAuth({
               take: 1,
             },
             profile: true,
-            webAuthnCredentials: true,
           },
         })
 
         if (!user || user.status !== "ACTIVE") return null
 
-        // Standard Password Verification Flow
-        const parsed = loginSchema.safeParse(credentials)
-        if (!parsed.success) return null
-
-        const passwordMatch = await bcrypt.compare(
-          parsed.data.password,
-          user.passwordHash
-        )
+        const passwordMatch = await bcrypt.compare(password, user.passwordHash)
         if (!passwordMatch) return null
 
         // Update last login
@@ -68,15 +56,12 @@ const { handlers, signIn, signOut, auth: nextAuthSession } = NextAuth({
       },
     }),
   ],
-  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in — populate token from user object
       if (user) {
         token.id = user.id
         token.workspaceId = (user as any).workspaceId
@@ -84,16 +69,12 @@ const { handlers, signIn, signOut, auth: nextAuthSession } = NextAuth({
         token.onboardingComplete = (user as any).onboardingComplete
         token.picture = user.image
       }
-      
-      // Allow client to update session properties
       if (trigger === "update" && session) {
         if (session.onboardingComplete !== undefined) token.onboardingComplete = session.onboardingComplete
         if (session.image !== undefined) token.picture = session.image
       }
-
       return token
     },
-
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
@@ -104,45 +85,8 @@ const { handlers, signIn, signOut, auth: nextAuthSession } = NextAuth({
       return session
     },
   },
-
   pages: {
     signIn: "/login",
     error: "/login",
   },
 })
-
-export { handlers, signIn, signOut }
-
-export const auth = async () => {
-  const session = await nextAuthSession()
-  if (session?.user) return session
-
-  // Bypass authentication: automatically log in as the first user in the database
-  const fallbackUser = await prisma.user.findFirst({
-    include: {
-      workspaces: {
-        where: { isActive: true },
-        take: 1,
-      },
-      profile: true,
-    }
-  })
-
-  if (fallbackUser) {
-    const membership = fallbackUser.workspaces[0]
-    return {
-      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      user: {
-        id: fallbackUser.id,
-        email: fallbackUser.email,
-        name: [fallbackUser.firstName, fallbackUser.lastName].filter(Boolean).join(" "),
-        image: fallbackUser.avatarUrl,
-        workspaceId: membership?.workspaceId ?? "",
-        role: fallbackUser.role,
-        onboardingComplete: !!fallbackUser.profile,
-      }
-    }
-  }
-
-  return null
-}
