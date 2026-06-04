@@ -10,6 +10,7 @@ if (process.env.VERCEL) {
   delete process.env.AUTH_URL
 }
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.AUTH_SECRET || "fallback-secret-key-for-personal-cfo-os-change-in-production",
   providers: [
     Credentials({
       credentials: {
