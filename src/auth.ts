@@ -40,57 +40,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         )
         if (!passwordMatch) return null
 
-        // If user has biometrics enabled in DB, we MUST verify webauthnResponse
-        const hasBiometrics = user.profile?.metadata && (user.profile.metadata as any).biometricEnabled
-        
-        if (hasBiometrics) {
-          if (!credentials.webauthnResponse) return null // Biometrics required but not provided!
-
-          const { verifyAuthenticationResponse } = await import("@simplewebauthn/server")
-          try {
-            const responseJSON = JSON.parse(credentials.webauthnResponse as string)
-            const credentialID = responseJSON.id
-            const authenticator = user.webAuthnCredentials.find(
-              c => Buffer.from(c.credentialID).toString('base64url') === credentialID || Buffer.from(c.credentialID).toString('base64') === credentialID
-            )
-            
-            if (!authenticator || !user.currentChallenge) return null
-
-              const appUrl = new URL(process.env.NEXTAUTH_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
-              const expectedOrigin = appUrl.origin
-              const expectedRPID = appUrl.hostname
-
-              const verification = await verifyAuthenticationResponse({
-                response: responseJSON,
-                expectedChallenge: user.currentChallenge,
-                expectedOrigin: [expectedOrigin, "http://localhost:3000"],
-                expectedRPID,
-              authenticator: {
-                credentialID: new Uint8Array(authenticator.credentialID),
-                credentialPublicKey: new Uint8Array(authenticator.credentialPublicKey),
-                counter: Number(authenticator.counter),
-                transports: authenticator.transports ? JSON.parse(authenticator.transports) : undefined,
-              }
-            })
-
-            if (!verification.verified) return null
-            
-            // Clear challenge and update counter
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { currentChallenge: null }
-            })
-            await prisma.webAuthnCredential.update({
-              where: { id: authenticator.id },
-              data: { counter: verification.authenticationInfo.newCounter }
-            })
-
-          } catch (e) {
-            console.error(e)
-            return null
-          }
-        }
-
         // Update last login
         await prisma.user.update({
           where: { id: user.id },
