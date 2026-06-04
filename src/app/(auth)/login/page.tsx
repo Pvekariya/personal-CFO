@@ -49,7 +49,8 @@ export default function LoginPage() {
     
     try {
       // 1. Check if the user has biometrics enabled
-      const resOpts = await fetch("/api/auth/webauthn/auth-options", {
+      const rpID = window.location.hostname
+      const resOpts = await fetch(`/api/auth/webauthn/auth-options?rpID=${rpID}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
