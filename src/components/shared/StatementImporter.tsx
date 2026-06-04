@@ -27,17 +27,19 @@ type ParsedRow = {
 export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
   const [selectedAccountId, setSelectedAccountId] = useState("")
   const [file, setFile] = useState<File | null>(null)
+  const [isPdf, setIsPdf] = useState(false)
   const [parsedData, setParsedData] = useState<ParsedRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [aiParsing, setAiParsing] = useState(false)
   const [error, setError] = useState("")
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   
-  // Column Mapping
+  // Column Mapping (CSV Only)
   const [headers, setHeaders] = useState<string[]>([])
   const [dateCol, setDateCol] = useState("")
   const [descCol, setDescCol] = useState("")
   const [amountCol, setAmountCol] = useState("")
-  const [typeCol, setTypeCol] = useState("") // Optional, if amount isn't signed
+  const [typeCol, setTypeCol] = useState("") 
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -46,28 +48,68 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
     if (selectedFile) {
       setFile(selectedFile)
       setError("")
-      // Read headers immediately
-      Papa.parse(selectedFile, {
-        header: true,
-        preview: 1,
-        complete: (results) => {
-          if (results.meta.fields) {
-            setHeaders(results.meta.fields)
-            
-            // Auto-guess columns
-            const f = results.meta.fields.map(f => f.toLowerCase())
-            setDateCol(results.meta.fields[f.findIndex(x => x.includes('date') || x.includes('time'))] || "")
-            setDescCol(results.meta.fields[f.findIndex(x => x.includes('desc') || x.includes('narration') || x.includes('particular'))] || "")
-            setAmountCol(results.meta.fields[f.findIndex(x => x.includes('amount') || x.includes('value'))] || "")
+      setParsedData([])
+      setHeaders([])
+
+      const isPdfFile = selectedFile.type === "application/pdf" || selectedFile.name.toLowerCase().endsWith(".pdf")
+      setIsPdf(isPdfFile)
+
+      if (!isPdfFile) {
+        // Read headers for CSV immediately
+        Papa.parse(selectedFile, {
+          header: true,
+          preview: 1,
+          complete: (results) => {
+            if (results.meta.fields) {
+              setHeaders(results.meta.fields)
+              
+              // Auto-guess columns
+              const f = results.meta.fields.map(f => f.toLowerCase())
+              setDateCol(results.meta.fields[f.findIndex(x => x.includes('date') || x.includes('time'))] || "")
+              setDescCol(results.meta.fields[f.findIndex(x => x.includes('desc') || x.includes('narration') || x.includes('particular'))] || "")
+              setAmountCol(results.meta.fields[f.findIndex(x => x.includes('amount') || x.includes('value'))] || "")
+            }
           }
-        }
-      })
+        })
+      }
     }
   }
 
-  const handleParse = () => {
-    if (!file || !dateCol || !descCol || !amountCol) {
-      setError("Please select a file and map all required columns.")
+  const handleParse = async () => {
+    if (!file) {
+      setError("Please select a file.")
+      return
+    }
+
+    if (isPdf) {
+      setAiParsing(true)
+      setError("")
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        
+        const res = await fetch("/api/v1/transactions/parse-pdf", {
+          method: "POST",
+          body: formData
+        })
+        const json = await res.json()
+        
+        if (!res.ok) {
+          throw new Error(json.error || "Failed to parse PDF")
+        }
+        
+        setParsedData(json.data)
+      } catch (err: any) {
+        setError(err.message || "An error occurred parsing the PDF.")
+      } finally {
+        setAiParsing(false)
+      }
+      return
+    }
+
+    // CSV Parse
+    if (!dateCol || !descCol || !amountCol) {
+      setError("Please map all required columns.")
       return
     }
 
@@ -84,12 +126,10 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
 
           if (!rawDate || !rawAmount) continue
 
-          // Clean amount (remove commas, currency symbols)
           rawAmount = String(rawAmount).replace(/[^0-9.-]+/g, "")
           let amount = parseFloat(rawAmount)
           if (isNaN(amount)) continue
 
-          // Determine Type
           let type: "INCOME" | "EXPENSE" = amount >= 0 ? "INCOME" : "EXPENSE"
           
           if (typeCol && rawType) {
@@ -102,48 +142,34 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
                  amount = Math.abs(amount)
              }
           } else {
-             // If no type column, rely on sign of amount
              amount = Math.abs(amount)
           }
 
-          // Format Date (Assume DD/MM/YYYY or YYYY-MM-DD)
-          // Simple standardizer:
-          let dateStr = new Date().toISOString()
-          try {
-             // Try to parse DD/MM/YYYY or DD-MM-YYYY
-             if (/^\d{2}[/-]\d{2}[/-]\d{4}/.test(rawDate)) {
-                 const [d, m, y] = rawDate.split(/[/-]/)
-                 dateStr = new Date(`${y}-${m}-${d}`).toISOString()
-             } else {
-                 dateStr = new Date(rawDate).toISOString()
-             }
-          } catch(e) {}
-
           rows.push({
-            date: dateStr,
-            description: String(rawDesc || "Imported Transaction"),
+            date: new Date(rawDate).toISOString(), // ensure standard format
+            description: rawDesc,
             amount,
             type
           })
         }
         setParsedData(rows)
+      },
+      error: (e) => {
+        setError(e.message)
       }
     })
   }
 
   const handleImport = async () => {
     if (!selectedAccountId) {
-      setError("Please select an account to import to.")
+      setError("Please select a target account.")
       return
     }
 
     setLoading(true)
     setError("")
-    setProgress({ current: 0, total: parsedData.length })
-
     let successCount = 0
 
-    // Import sequentially to avoid rate limits/db locks
     for (let i = 0; i < parsedData.length; i++) {
       const row = parsedData[i]
       try {
@@ -156,7 +182,6 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
             amount: row.amount,
             date: row.date.split("T")[0],
             description: row.description,
-            // categoryId is null, our Smart Categorizer will handle it!
           }),
         })
         successCount++
@@ -181,7 +206,7 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
         <div className="p-6 border-b border-border flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">Import Bank Statement</h2>
-            <p className="text-sm text-muted-foreground mt-1">Upload a CSV file from your bank.</p>
+            <p className="text-sm text-muted-foreground mt-1">Upload a CSV or PDF file from your bank.</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-secondary transition-colors">
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
@@ -212,27 +237,27 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold">Upload CSV Statement</label>
+                  <label className="text-sm font-bold">Upload CSV or PDF Statement</label>
                   <div 
-                    className="border-2 border-dashed border-primary/30 rounded-2xl p-8 text-center hover:bg-primary/5 transition-colors cursor-pointer"
+                    className={`border-2 border-dashed ${isPdf ? 'border-purple-500/50 bg-purple-500/5' : 'border-primary/30 hover:bg-primary/5'} rounded-2xl p-8 text-center transition-colors cursor-pointer`}
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input 
                       type="file" 
-                      accept=".csv" 
+                      accept=".csv,.pdf" 
                       className="hidden" 
                       ref={fileInputRef} 
                       onChange={handleFileSelect}
                     />
                     <img src="https://img.icons8.com/ios/50/upload--v1.png" alt="Upload" className="w-10 h-10 mx-auto dark:invert opacity-60 mb-3" />
-                    <p className="font-semibold">{file ? file.name : "Click to select CSV file"}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Make sure it has header columns.</p>
+                    <p className="font-semibold">{file ? file.name : "Click to select CSV or PDF file"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Make sure it has table data.</p>
                   </div>
                 </div>
               </div>
 
-              {/* Step 2: Mapping (Only visible if headers are loaded) */}
-              {headers.length > 0 && (
+              {/* Step 2: Mapping (CSV Only) */}
+              {headers.length > 0 && !isPdf && (
                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border space-y-4 animate-in slide-in-from-bottom-4">
                   <h3 className="font-bold text-sm">Map Columns</h3>
                   
@@ -259,62 +284,66 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-muted-foreground">Type (Dr/Cr) Column (Optional)</label>
+                      <label className="text-xs font-semibold text-muted-foreground">Type/CR-DR Column (Optional)</label>
                       <select value={typeCol} onChange={e => setTypeCol(e.target.value)} className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-xs">
-                        <option value="">(None - use amount sign)</option>
+                        <option value="">None (Use Signed Amount)</option>
                         {headers.map(h => <option key={h} value={h}>{h}</option>)}
                       </select>
                     </div>
                   </div>
-
-                  <Button onClick={handleParse} className="w-full">Preview Transactions</Button>
                 </div>
               )}
             </>
           ) : (
-            /* Step 3: Preview & Confirm */
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold">Preview ({parsedData.length} Transactions)</h3>
-                <Button variant="ghost" size="sm" onClick={() => setParsedData([])}>Back</Button>
-              </div>
-              
-              <div className="max-h-64 overflow-y-auto rounded-xl border border-border divide-y divide-border/50">
-                {parsedData.slice(0, 10).map((row, i) => (
-                  <div key={i} className="p-3 flex justify-between items-center text-sm">
-                    <div>
-                      <p className="font-semibold">{row.description}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(row.date).toLocaleDateString()}</p>
-                    </div>
-                    <p className={`font-bold ${row.type === 'INCOME' ? 'text-emerald-500' : 'text-foreground'}`}>
-                      {row.type === 'INCOME' ? '+' : '-'}{formatCurrency(row.amount)}
-                    </p>
-                  </div>
-                ))}
-                {parsedData.length > 10 && (
-                  <div className="p-3 text-center text-xs text-muted-foreground bg-muted/20">
-                    + {parsedData.length - 10} more transactions...
-                  </div>
-                )}
-              </div>
+             <div className="space-y-4 animate-in fade-in">
+               <div className="flex items-center justify-between">
+                 <h3 className="font-bold">Preview Transactions ({parsedData.length})</h3>
+                 <Button variant="ghost" size="sm" onClick={() => setParsedData([])}>Reset</Button>
+               </div>
+               <div className="max-h-[300px] overflow-y-auto rounded-xl border border-border">
+                 <table className="w-full text-sm text-left">
+                   <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 sticky top-0">
+                     <tr>
+                       <th className="px-4 py-3">Date</th>
+                       <th className="px-4 py-3">Description</th>
+                       <th className="px-4 py-3 text-right">Amount</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {parsedData.slice(0, 50).map((row, i) => (
+                       <tr key={i} className="border-b border-border/50 hover:bg-secondary/20">
+                         <td className="px-4 py-3 whitespace-nowrap">{row.date.split("T")[0]}</td>
+                         <td className="px-4 py-3 truncate max-w-[200px]">{row.description}</td>
+                         <td className={`px-4 py-3 text-right font-medium ${row.type === 'INCOME' ? 'text-emerald-500' : 'text-foreground'}`}>
+                           {row.type === 'INCOME' ? '+' : '-'}{formatCurrency(row.amount)}
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+               {parsedData.length > 50 && (
+                 <p className="text-xs text-muted-foreground text-center">Showing first 50 rows.</p>
+               )}
+             </div>
+          )}
+        </div>
 
-              {loading ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm font-bold">
-                    <span>Importing...</span>
-                    <span>{progress.current} / {progress.total}</span>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(progress.current/progress.total)*100}%` }} />
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center animate-pulse">Smart Categorizer is analyzing transactions...</p>
-                </div>
-              ) : (
-                <Button onClick={handleImport} className="w-full h-12 text-lg font-bold shadow-lg">
-                  Confirm & Import All
-                </Button>
-              )}
-            </div>
+        <div className="p-6 border-t border-border flex items-center justify-end gap-3 bg-secondary/10 rounded-b-3xl">
+          <Button variant="ghost" onClick={onClose} disabled={loading || aiParsing}>Cancel</Button>
+          
+          {parsedData.length === 0 ? (
+            <Button 
+              onClick={handleParse} 
+              disabled={!file || (!isPdf && (!dateCol || !descCol || !amountCol)) || aiParsing}
+              className={isPdf ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}
+            >
+              {aiParsing ? "AI Parsing..." : isPdf ? "✨ Parse with AI" : "Review Data"}
+            </Button>
+          ) : (
+            <Button onClick={handleImport} disabled={loading || !selectedAccountId}>
+              {loading ? `Importing (${progress.current}/${progress.total})...` : "Import Transactions"}
+            </Button>
           )}
         </div>
       </div>
