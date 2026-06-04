@@ -24,7 +24,8 @@ export async function POST(request: Request) {
       )
     }
 
-    const { firstName, lastName, email, password } = parsed.data
+    const { firstName, lastName, password } = parsed.data
+    const email = parsed.data.email.toLowerCase().trim()
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({

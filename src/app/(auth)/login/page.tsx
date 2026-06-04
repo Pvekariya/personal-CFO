@@ -28,7 +28,7 @@ export default function LoginPage() {
       const result: any = await signIn("credentials", payload)
 
       if (result?.error) {
-        setError("Invalid email or password.")
+        setError(`Login failed: ${result.error}`)
       } else {
         router.push("/")
         router.refresh()
