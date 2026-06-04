@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/api/auth"
 import OpenAI from "openai"
 import { PDFParse } from "pdf-parse"
 
+export const maxDuration = 60; // Allow up to 60s for OpenAI parsing
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(req: NextRequest) {

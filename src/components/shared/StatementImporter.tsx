@@ -92,7 +92,15 @@ export function StatementImporter({ accounts, onSuccess, onClose }: Props) {
           method: "POST",
           body: formData
         })
-        const json = await res.json()
+        
+        const text = await res.text()
+        
+        let json
+        try {
+          json = JSON.parse(text)
+        } catch (e) {
+          throw new Error("The server returned an invalid response. The file might be too large or the request timed out. Please try a smaller file or a CSV.")
+        }
         
         if (!res.ok) {
           throw new Error(json.error || "Failed to parse PDF")
