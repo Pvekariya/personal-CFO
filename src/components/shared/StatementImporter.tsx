@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/utils"
 type Account = {
   id: string
   name: string
-  currency: string
+  currency?: string
 }
 
 type Props = {
