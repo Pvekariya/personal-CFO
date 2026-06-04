@@ -4,10 +4,12 @@ import { prisma } from "@/lib/db/client"
 import bcrypt from "bcryptjs"
 import { loginSchema } from "@/lib/validations/auth"
 
-// Force NextAuth to use request headers (trustHost) instead of potentially bad environment variables
+// Force NextAuth to use request headers (trustHost) instead of potentially bad environment variables or internal Vercel overrides
 if (process.env.VERCEL) {
   delete process.env.NEXTAUTH_URL
   delete process.env.AUTH_URL
+  delete process.env.VERCEL_URL
+  delete process.env.VERCEL_PROJECT_PRODUCTION_URL
 }
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || "fallback-secret-key-for-personal-cfo-os-change-in-production",
