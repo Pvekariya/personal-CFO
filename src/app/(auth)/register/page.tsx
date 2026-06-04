@@ -1,79 +1,41 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { registerAction } from "./actions"
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | undefined>()
+  const [isPending, startTransition] = useTransition()
 
-  function updateField(field: string, value: string) {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    try {
-      // Register
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
-
-      const json = await res.json()
-
-      if (!res.ok) {
-        setError(json.error || "Registration failed")
-        setLoading(false)
-        return
-      }
-
-      // Auto sign-in after registration
-      const signInResult = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      })
-
-      if (signInResult?.error) {
-        setError("Account created but sign-in failed. Please log in manually.")
-        // Don't push to login, just show the error and let them click it
-        setLoading(false)
-      } else {
-        window.location.href = "/onboarding/profile"
-      }
-    } catch {
-      setError("Something went wrong. Please try again.")
-    } finally {
-      setLoading(false)
+  async function clientAction(formData: FormData) {
+    if (formData.get("password") !== formData.get("confirmPassword")) {
+      setError("Passwords do not match")
+      return
     }
+
+    setError(undefined)
+    startTransition(async () => {
+      const errorMessage = await registerAction(undefined, formData)
+      if (errorMessage) {
+        setError(errorMessage)
+      }
+    })
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-sm mx-auto">
       <div className="text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">Create an account</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">
+          Create an account
+        </h1>
         <p className="text-muted-foreground font-medium">
           Start mastering your wealth today.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form action={clientAction} className="space-y-5">
         {error && (
           <div className="rounded-xl bg-destructive/10 p-4 text-sm font-medium text-destructive animate-in fade-in zoom-in-95">
             {error}
@@ -87,12 +49,9 @@ export default function RegisterPage() {
             </label>
             <input
               id="firstName"
-              type="text"
-              value={formData.firstName}
-              onChange={(e) => updateField("firstName", e.target.value)}
-              placeholder="e.g. John"
+              name="firstName"
               required
-              className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
+              className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
             />
           </div>
           <div className="space-y-2">
@@ -101,11 +60,8 @@ export default function RegisterPage() {
             </label>
             <input
               id="lastName"
-              type="text"
-              value={formData.lastName}
-              onChange={(e) => updateField("lastName", e.target.value)}
-              placeholder="e.g. Doe"
-              className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
+              name="lastName"
+              className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
             />
           </div>
         </div>
@@ -116,12 +72,10 @@ export default function RegisterPage() {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
-            value={formData.email}
-            onChange={(e) => updateField("email", e.target.value)}
-            placeholder="e.g. john@example.com"
             required
-            className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
+            className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
           />
         </div>
 
@@ -131,12 +85,11 @@ export default function RegisterPage() {
           </label>
           <input
             id="password"
+            name="password"
             type="password"
-            value={formData.password}
-            onChange={(e) => updateField("password", e.target.value)}
-            placeholder="Min 8 chars, uppercase + number"
+            placeholder="••••••••"
             required
-            className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
+            className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
           />
         </div>
 
@@ -146,23 +99,22 @@ export default function RegisterPage() {
           </label>
           <input
             id="confirmPassword"
+            name="confirmPassword"
             type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => updateField("confirmPassword", e.target.value)}
             placeholder="••••••••"
             required
-            className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
+            className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
           />
         </div>
 
-        <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-1000 fill-mode-both">
-          <Button type="submit" className="w-full h-12 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0" disabled={loading}>
-            {loading ? "Creating Account..." : "Create Account"}
+        <div className="pt-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-1000 fill-mode-both">
+          <Button type="submit" className="w-full h-12 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0" disabled={isPending}>
+            {isPending ? "Creating Account..." : "Create Account"}
           </Button>
         </div>
       </form>
 
-      <p className="text-center text-sm font-medium text-muted-foreground animate-in fade-in duration-700 delay-[1200ms] fill-mode-both">
+      <p className="text-center text-sm font-medium text-muted-foreground animate-in fade-in duration-700 delay-1000 fill-mode-both">
         Already have an account?{" "}
         <Link
           href="/login"

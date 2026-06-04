@@ -1,43 +1,23 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { loginAction } from "./actions"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | undefined>()
+  const [isPending, startTransition] = useTransition()
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    try {
-      const result: any = await signIn("credentials", {
-        email,
-        password,
-        redirect: false, // Wait, if I use redirect: true, it will reload the page on error too. I should keep redirect: false but do window.location.href instead of router.push
-      })
-
-      if (result?.error) {
-        setError(`Login failed: ${result.error}`)
-        setLoading(false)
-      } else {
-        // Use a hard reload instead of router.push to ensure cookies are sent
-        window.location.href = "/"
+  async function clientAction(formData: FormData) {
+    setError(undefined)
+    startTransition(async () => {
+      const errorMessage = await loginAction(undefined, formData)
+      if (errorMessage) {
+        setError(errorMessage)
       }
-    } catch {
-      setError("Something went wrong. Please try again.")
-      setLoading(false)
-    }
+    })
   }
-
 
   return (
     <div className="space-y-8">
@@ -50,7 +30,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form action={clientAction} className="space-y-5">
         {error && (
           <div className="rounded-xl bg-destructive/10 p-4 text-sm font-medium text-destructive animate-in fade-in zoom-in-95">
             {error}
@@ -63,9 +43,8 @@ export default function LoginPage() {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             placeholder="e.g. john@example.com"
             required
             className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
@@ -86,9 +65,8 @@ export default function LoginPage() {
           </div>
           <input
             id="password"
+            name="password"
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
             className="flex h-12 w-full rounded-2xl border border-input/60 bg-background/50 px-4 py-2 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 disabled:opacity-50 hover:bg-background/80"
@@ -96,8 +74,8 @@ export default function LoginPage() {
         </div>
 
         <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
-          <Button type="submit" className="w-full h-12 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0" disabled={loading}>
-            {loading ? "Authenticating..." : "Sign in securely"}
+          <Button type="submit" className="w-full h-12 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0" disabled={isPending}>
+            {isPending ? "Authenticating..." : "Sign in securely"}
           </Button>
         </div>
       </form>
