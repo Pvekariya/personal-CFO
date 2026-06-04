@@ -131,7 +131,7 @@ export default async function DashboardPage() {
 
       {/* Main KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="relative overflow-hidden group hover:shadow-[0_8px_40px_rgba(0,122,255,0.15)] transition-all duration-500 hover:-translate-y-1">
+        <Card className="premium-card premium-card-hover relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Total Net Worth</CardTitle>
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
             <div className={`text-4xl font-extrabold tracking-tighter ${totalNetWorth >= 0 ? 'bg-clip-text text-transparent bg-gradient-to-br from-emerald-400 to-teal-600 dark:from-emerald-300 dark:to-teal-500' : 'text-rose-500'}`}>
               {totalNetWorth >= 0 ? '+' : ''}{formatCurrency(totalNetWorth, currency)}
             </div>
-            <div className="flex items-center mt-3 p-2 bg-secondary/50 rounded-lg border border-border/50 backdrop-blur-sm">
+            <div className="premium-card flex items-center mt-3 p-2 bg-secondary/50 rounded-lg border border-border/50 backdrop-blur-sm">
               <p className="text-xs text-muted-foreground font-medium flex justify-between w-full">
                 <span>Assets <span className="text-foreground ml-1">{formatCurrency(liquidNetWorth + investedNetWorth, currency)}</span></span>
                 <span className="opacity-50">•</span>

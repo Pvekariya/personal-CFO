@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 
 type Notification = {
   id: string
@@ -11,7 +12,10 @@ type Notification = {
   createdAt: string
 }
 
-export function TopHeader({ user, title, subtitle, icon }: { user: any, title?: string, subtitle?: string, icon?: string }) {
+export function TopHeader({ user: propUser, title, subtitle, icon, children }: { user?: any, title?: string, subtitle?: string, icon?: string, children?: React.ReactNode }) {
+  const { data: session } = useSession()
+  const user = propUser || session?.user
+  
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -135,6 +139,12 @@ export function TopHeader({ user, title, subtitle, icon }: { user: any, title?: 
       </div>
       
       <div className="hidden md:flex items-center gap-3">
+        {children && (
+          <div className="flex items-center gap-3 mr-2">
+            {children}
+          </div>
+        )}
+        
         {/* Notifications Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button 

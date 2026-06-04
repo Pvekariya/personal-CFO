@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { createTransactionSchema } from "@/lib/validations/transactions"
 import { StatementImporter } from "@/components/shared/StatementImporter"
 import { DaybookInsights } from "@/components/shared/DaybookInsights"
+import { TopHeader } from "@/components/shared/TopHeader"
 
 type Category = {
   id: string
@@ -314,32 +315,28 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Track your income, expenses, and transfers
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="flex gap-2"
-            onClick={() => setShowImporter(true)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-            Upload Statement
-          </Button>
-          <Button
-            onClick={() => {
-              if (!showForm) resetForm()
-              setShowForm(!showForm)
-            }}
-          >
-            {showForm ? "Cancel" : "+ Add Transaction"}
-          </Button>
-        </div>
-      </div>
+      <TopHeader 
+        title="Transactions" 
+        subtitle="Track your income, expenses, and transfers"
+        icon="https://img.icons8.com/ios/50/activity-history.png"
+      >
+        <Button
+          variant="outline"
+          className="flex gap-2"
+          onClick={() => setShowImporter(true)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+          Upload Statement
+        </Button>
+        <Button
+          onClick={() => {
+            if (!showForm) resetForm()
+            setShowForm(!showForm)
+          }}
+        >
+          {showForm ? "Cancel" : "+ Add Transaction"}
+        </Button>
+      </TopHeader>
 
       {/* Daybook Insights Panel (Budgets & Recurring Engine) */}
       {!showForm && <DaybookInsights />}
@@ -418,7 +415,7 @@ export default function TransactionsPage() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-xl p-4 shadow-inner animate-in fade-in slide-in-from-top-4 duration-300 relative z-10"
+          className="premium-card p-6 space-y-4 animate-in slide-in-from-top-4 duration-300"
         >
           {formError && (
             <div className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive mb-3">

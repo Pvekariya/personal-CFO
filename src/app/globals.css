@@ -178,3 +178,15 @@
     @apply tracking-[0.01em] font-medium;
   }
 }
+
+.premium-card {
+  @apply rounded-3xl border border-border/50 bg-card/40 backdrop-blur-md shadow-sm transition-all duration-300;
+}
+
+.premium-card-hover {
+  @apply hover:shadow-[0_8px_30px_rgba(0,122,255,0.08)] hover:-translate-y-0.5 hover:bg-card/60;
+}
+.premium-glass {
+  @apply rounded-2xl border border-border/50 bg-card/60 backdrop-blur-2xl ring-1 ring-white/20 dark:ring-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.03)];
+}
+

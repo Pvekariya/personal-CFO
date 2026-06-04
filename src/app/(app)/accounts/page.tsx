@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
+import { TopHeader } from "@/components/shared/TopHeader"
 
 type Account = {
   id: string
@@ -163,13 +164,11 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Accounts</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage your bank accounts, wallets, and investments
-          </p>
-        </div>
+      <TopHeader 
+        title="Accounts" 
+        subtitle="Manage your bank accounts, wallets, and investments"
+        icon="https://img.icons8.com/ios/50/museum.png"
+      >
         <Button
           onClick={() => {
             resetForm()
@@ -178,10 +177,10 @@ export default function AccountsPage() {
         >
           {showForm ? "Cancel" : "+ Add Account"}
         </Button>
-      </div>
+      </TopHeader>
 
       {/* Total Balance Card */}
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="premium-card p-5">
         <p className="text-sm font-medium text-muted-foreground">
           Total Balance
         </p>
@@ -195,7 +194,7 @@ export default function AccountsPage() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-border bg-card p-6 space-y-4"
+          className="premium-card p-6 space-y-4"
         >
           <h3 className="font-semibold">
             {editingId ? "Edit Account" : "New Account"}
@@ -367,7 +366,7 @@ export default function AccountsPage() {
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-2xl ring-1 ring-white/20 dark:ring-white/5 p-5 space-y-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,122,255,0.08)] transition-all duration-300 group"
+              className="premium-card premium-card-hover p-5 space-y-4 group"
             >
               <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
