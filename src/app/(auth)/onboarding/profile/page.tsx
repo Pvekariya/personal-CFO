@@ -57,8 +57,8 @@ export default function OnboardingProfilePage() {
 
       // Update session to mark onboarding complete
       await update({ onboardingComplete: true })
-      router.push("/onboarding/complete")
-      router.refresh()
+      // Hard navigation to ensure the updated session is used
+      window.location.href = "/onboarding/complete"
     } catch {
       setError("Something went wrong. Please try again.")
     } finally {

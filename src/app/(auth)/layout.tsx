@@ -43,7 +43,7 @@ export default function AuthLayout({
             Master your wealth with <span className="text-primary">precision.</span>
           </h1>
           <p className="text-xl text-muted-foreground font-medium leading-relaxed">
-            Institutional-grade analytics, seamless biometric security, and a relentless AI architecting your financial destiny.
+            Institutional-grade analytics, bank-level security, and a relentless AI architecting your financial destiny.
           </p>
           
           <div className="grid grid-cols-2 gap-6 pt-4">

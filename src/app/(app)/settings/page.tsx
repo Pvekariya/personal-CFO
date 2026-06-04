@@ -37,8 +37,6 @@ export default function SettingsPage() {
     financialFreedomYear: "",
     inflationAssumption: "",
     currency: "INR",
-    twoFactorEnabled: false,
-    biometricEnabled: false,
     avatarUrl: "",
   })
 
@@ -83,8 +81,6 @@ export default function SettingsPage() {
             financialFreedomYear: profile.financialFreedomYear?.toString() || "",
             inflationAssumption: profile.inflationAssumption?.toString() || "7",
             currency: user.currency || "INR",
-            twoFactorEnabled: user.twoFactorEnabled || false,
-            biometricEnabled: user.profile?.metadata ? (user.profile.metadata as any).biometricEnabled : false,
             avatarUrl: user.avatarUrl || "",
           })
         }
@@ -402,28 +398,16 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Security & Authentication */}
+        {/* Security Note */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="border-b border-border bg-muted/30 px-6 py-4">
-            <h2 className="font-semibold text-lg">Security & Authentication</h2>
-            <p className="text-xs text-muted-foreground mt-1">Manage your login preferences and account security.</p>
+            <h2 className="font-semibold text-lg">Security</h2>
+            <p className="text-xs text-muted-foreground mt-1">Your account is secured with password-based authentication.</p>
           </div>
-          <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div>
-                <h4 className="text-sm font-medium">Two-Factor Authentication (OTP)</h4>
-                <p className="text-xs text-muted-foreground">Receive a one-time passcode on your phone/email when signing in.</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer"
-                  checked={formData.twoFactorEnabled}
-                  onChange={(e) => setFormData({ ...formData, twoFactorEnabled: e.target.checked })}
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
+          <div className="p-6">
+            <p className="text-sm text-muted-foreground">
+              To change your password, use the Change Password section below.
+            </p>
           </div>
         </div>
 
