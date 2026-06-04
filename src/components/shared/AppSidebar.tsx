@@ -95,9 +95,11 @@ export function AppSidebar({ userName, userEmail }: { userName?: string | null, 
                 key={item.href}
                 href={item.href}
                 className={`
-                  flex items-center gap-3 rounded-lg text-sm transition-colors group
-                  ${isCollapsed ? "justify-center p-3" : "px-3 py-2"}
-                  ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" : "text-sidebar-foreground hover:bg-sidebar-accent"}
+                  flex items-center gap-3 rounded-xl text-sm transition-all group relative overflow-hidden
+                  ${isCollapsed ? "justify-center p-3" : "px-3 py-2.5"}
+                  ${isActive 
+                    ? "text-primary font-bold shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ring-1 ring-border/50 bg-gradient-to-r from-primary/10 to-primary/5" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 `}
                 title={isCollapsed ? item.label : undefined}
               >

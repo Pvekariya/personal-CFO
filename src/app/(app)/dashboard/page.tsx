@@ -130,57 +130,81 @@ export default async function DashboardPage() {
       />
 
       {/* Main KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-[0_8px_30px_rgba(0,122,255,0.12)] transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Net Worth</CardTitle>
-            <img src="https://img.icons8.com/ios/50/diamond--v1.png" alt="Net Worth" className="w-5 h-5 dark:invert opacity-50" />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="relative overflow-hidden group hover:shadow-[0_8px_40px_rgba(0,122,255,0.15)] transition-all duration-500 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Total Net Worth</CardTitle>
+            <div className="p-2 bg-primary/10 rounded-full group-hover:scale-110 transition-transform duration-300">
+              <img src="https://img.icons8.com/ios/50/diamond--v1.png" alt="Net Worth" className="w-4 h-4 dark:invert opacity-70" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-extrabold tracking-tight ${totalNetWorth >= 0 ? 'bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-teal-400' : 'text-rose-500'}`}>
+          <CardContent className="relative z-10">
+            <div className={`text-4xl font-extrabold tracking-tighter ${totalNetWorth >= 0 ? 'bg-clip-text text-transparent bg-gradient-to-br from-emerald-400 to-teal-600 dark:from-emerald-300 dark:to-teal-500' : 'text-rose-500'}`}>
               {totalNetWorth >= 0 ? '+' : ''}{formatCurrency(totalNetWorth, currency)}
             </div>
-            <p className="text-xs text-muted-foreground mt-2 font-medium">
-              Assets: {formatCurrency(liquidNetWorth + investedNetWorth, currency)} • Debt: {formatCurrency(totalLiabilities, currency)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Cash Flow</CardTitle>
-            <img src="https://img.icons8.com/ios/50/bank-cards.png" alt="Cash Flow" className="w-5 h-5 dark:invert opacity-50" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{formatCurrency(cashFlow, currency)}</div>
-            <div className="flex gap-3 text-xs text-muted-foreground mt-2 font-medium">
-              <span className="flex items-center text-emerald-500">
-                <img src="https://img.icons8.com/ios/50/collapse-arrow--v1.png" className="w-3 h-3 mr-1" alt="In" />
-                {formatCurrency(income, currency)}
-              </span>
-              <span className="flex items-center text-rose-500">
-                <img src="https://img.icons8.com/ios/50/expand-arrow--v1.png" className="w-3 h-3 mr-1" alt="Out" />
-                {formatCurrency(expense, currency)}
-              </span>
+            <div className="flex items-center mt-3 p-2 bg-secondary/50 rounded-lg border border-border/50 backdrop-blur-sm">
+              <p className="text-xs text-muted-foreground font-medium flex justify-between w-full">
+                <span>Assets <span className="text-foreground ml-1">{formatCurrency(liquidNetWorth + investedNetWorth, currency)}</span></span>
+                <span className="opacity-50">•</span>
+                <span>Debt <span className="text-foreground ml-1">{formatCurrency(totalLiabilities, currency)}</span></span>
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Financial Health</CardTitle>
-            <img src="https://img.icons8.com/ios/50/heart-health.png" alt="Health" className="w-5 h-5 dark:invert opacity-50" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold tracking-tight ${healthColor}`}>
-              {healthScore} <span className="text-sm text-muted-foreground font-medium">/ 100</span>
+        <Card className="relative overflow-hidden group hover:shadow-[0_8px_40px_rgba(138,43,226,0.15)] transition-all duration-500 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Monthly Cash Flow</CardTitle>
+            <div className="p-2 bg-purple-500/10 rounded-full group-hover:scale-110 transition-transform duration-300">
+              <img src="https://img.icons8.com/ios/50/bank-cards.png" alt="Cash Flow" className="w-4 h-4 dark:invert opacity-70" />
             </div>
-            <div className="w-full bg-secondary h-1.5 rounded-full mt-3 overflow-hidden shadow-inner">
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <div className="text-4xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">
+              {formatCurrency(cashFlow, currency)}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <div className="flex-1 flex items-center p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center mr-2">
+                  <img src="https://img.icons8.com/ios/50/collapse-arrow--v1.png" className="w-3 h-3" alt="In" />
+                </div>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(income, currency)}</span>
+              </div>
+              <div className="flex-1 flex items-center p-2 bg-rose-500/10 rounded-lg border border-rose-500/20">
+                <div className="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center mr-2">
+                  <img src="https://img.icons8.com/ios/50/expand-arrow--v1.png" className="w-3 h-3" alt="Out" />
+                </div>
+                <span className="text-xs font-bold text-rose-600 dark:text-rose-400">{formatCurrency(expense, currency)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden group hover:shadow-[0_8px_40px_rgba(245,158,11,0.15)] transition-all duration-500 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Financial Health</CardTitle>
+            <div className="p-2 bg-orange-500/10 rounded-full group-hover:scale-110 transition-transform duration-300">
+              <img src="https://img.icons8.com/ios/50/heart-health.png" alt="Health" className="w-4 h-4 dark:invert opacity-70" />
+            </div>
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <div className={`text-4xl font-extrabold tracking-tighter ${healthColor} flex items-baseline gap-1`}>
+              {healthScore} <span className="text-lg text-muted-foreground font-semibold">/ 100</span>
+            </div>
+            <div className="w-full bg-secondary h-2.5 rounded-full mt-4 overflow-hidden shadow-inner ring-1 ring-border/50">
               <div
-                className={`h-full transition-all duration-1000 ${healthScore >= 80 ? 'bg-emerald-500' : healthScore >= 50 ? 'bg-orange-500' : 'bg-rose-500'}`}
+                className={`h-full transition-all duration-1000 relative overflow-hidden ${healthScore >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : healthScore >= 50 ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-rose-400 to-rose-500'}`}
                 style={{ width: `${healthScore}%` }}
-              />
+              >
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] animate-[progress-stripe_1s_linear_infinite]" />
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium text-center">
+              {healthScore >= 80 ? "Excellent standing" : healthScore >= 50 ? "Needs some attention" : "Critical improvements needed"}
+            </p>
           </CardContent>
         </Card>
       </div>

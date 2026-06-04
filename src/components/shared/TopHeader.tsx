@@ -116,17 +116,19 @@ export function TopHeader({ user, title, subtitle, icon }: { user: any, title?: 
       </div>
 
       {/* Desktop Heading & Subtitle */}
-      <div>
+      <div className="flex flex-col justify-center">
         <div className="flex items-center gap-3">
           {icon && (
-            <div className="p-2 bg-primary/10 rounded-xl border border-primary/10 shadow-sm">
-              <img src={icon} alt="Icon" className="w-7 h-7 dark:invert" />
+            <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl border border-primary/20 shadow-inner">
+              <img src={icon} alt="Icon" className="w-6 h-6 dark:invert drop-shadow-md" />
             </div>
           )}
-          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">{title}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-foreground via-foreground/90 to-muted-foreground drop-shadow-sm">
+            {title}
+          </h1>
         </div>
         {subtitle && (
-          <p className="text-muted-foreground font-medium text-sm mt-1.5 ml-1">
+          <p className="text-muted-foreground font-medium text-sm mt-1.5 ml-1 opacity-80">
             {subtitle}
           </p>
         )}
