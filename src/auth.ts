@@ -11,7 +11,7 @@ if (process.env.VERCEL) {
   delete process.env.VERCEL_URL
   delete process.env.VERCEL_PROJECT_PRODUCTION_URL
 }
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const { handlers, signIn, signOut, auth: nextAuthSession } = NextAuth({
   secret: process.env.AUTH_SECRET || "fallback-secret-key-for-personal-cfo-os-change-in-production",
   providers: [
     Credentials({
@@ -110,3 +110,39 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/login",
   },
 })
+
+export { handlers, signIn, signOut }
+
+export const auth = async () => {
+  const session = await nextAuthSession()
+  if (session?.user) return session
+
+  // Bypass authentication: automatically log in as the first user in the database
+  const fallbackUser = await prisma.user.findFirst({
+    include: {
+      workspaces: {
+        where: { isActive: true },
+        take: 1,
+      },
+      profile: true,
+    }
+  })
+
+  if (fallbackUser) {
+    const membership = fallbackUser.workspaces[0]
+    return {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      user: {
+        id: fallbackUser.id,
+        email: fallbackUser.email,
+        name: [fallbackUser.firstName, fallbackUser.lastName].filter(Boolean).join(" "),
+        image: fallbackUser.avatarUrl,
+        workspaceId: membership?.workspaceId ?? "",
+        role: fallbackUser.role,
+        onboardingComplete: !!fallbackUser.profile,
+      }
+    }
+  }
+
+  return null
+}
