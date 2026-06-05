@@ -4,7 +4,7 @@ import { Providers } from "./providers"
 import "./globals.css"
 
 const manrope = Manrope({
-  variable: "--font-sans",
+  variable: "--font-manrope",
   subsets: ["latin"],
 })
 

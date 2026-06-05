@@ -29,6 +29,7 @@ export async function POST(request: Request) {
       where: {
         workspaceId,
         type: "EXPENSE",
+        deletedAt: null,
         date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } // last 90 days
       },
       _sum: { amount: true }

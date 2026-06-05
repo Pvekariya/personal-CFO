@@ -33,7 +33,7 @@ export default async function DashboardPage() {
       orderBy: { balance: "desc" },
     }),
     prisma.transaction.findMany({
-      where: { workspaceId },
+      where: { workspaceId, deletedAt: null },
       include: { category: true, account: true },
       orderBy: { date: "desc" },
       take: 5,
@@ -41,6 +41,7 @@ export default async function DashboardPage() {
     prisma.transaction.findMany({
       where: {
         workspaceId,
+        deletedAt: null,
         date: { gte: startOfMonth },
       },
     }),

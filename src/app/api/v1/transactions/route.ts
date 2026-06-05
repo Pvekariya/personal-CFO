@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
   const where: Prisma.TransactionWhereInput = {
     account: { workspaceId },
+    deletedAt: null,
   }
 
   if (query.accountId) where.accountId = query.accountId
