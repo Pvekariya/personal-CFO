@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/api/auth"
-import OpenAI from "openai"
+import { generateText } from "ai"
+import { google } from "@ai-sdk/google"
 import { PDFParse } from "pdf-parse"
 
-export const maxDuration = 60; // Allow up to 60s for OpenAI parsing
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+export const maxDuration = 60; // Allow up to 60s for AI parsing
 
 export async function POST(req: NextRequest) {
   const authResult = await requireAuth()
@@ -45,18 +44,16 @@ Each transaction object MUST have:
 Raw Bank Statement Text:
 ${text.substring(0, 20000)}`
 
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "gpt-4o-mini", // fast and capable
-      response_format: { type: "json_object" }
+    const { text: responseContent } = await generateText({
+      model: google("gemini-1.5-flash"),
+      prompt: prompt,
     })
-
-    const responseContent = completion.choices[0].message.content
     if (!responseContent) {
       throw new Error("No response from AI")
     }
 
-    const parsedData = JSON.parse(responseContent)
+    const cleanJSON = responseContent.replace(/```json/gi, '').replace(/```/g, '').trim()
+    const parsedData = JSON.parse(cleanJSON)
     
     if (!parsedData.transactions || !Array.isArray(parsedData.transactions)) {
       return NextResponse.json({ error: "Invalid format returned from AI" }, { status: 500 })

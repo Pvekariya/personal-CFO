@@ -1,6 +1,7 @@
-import { openai } from "@ai-sdk/openai"
+import { google } from "@ai-sdk/google"
 import { streamText } from "ai"
 import { auth } from "@/auth"
+import { prisma } from "@/lib/db/client"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -15,6 +16,48 @@ export async function POST(req: Request) {
     }
 
     const { messages } = await req.json()
+
+    // Fetch user context for training the AI
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId: session.user.id }
+    })
+    
+    const workspace = await prisma.workspace.findFirst({
+      where: { members: { some: { userId: session.user.id } } },
+      include: {
+        accounts: true,
+        assets: true,
+        liabilities: true,
+        goals: true,
+        budgets: true,
+      }
+    })
+
+    const userDataContext = `
+=============================================================
+USER'S CURRENT FINANCIAL DATA (LIVE FROM DATABASE)
+=============================================================
+User Profile:
+- Age: ${profile?.age || 'Not provided'}
+- Monthly Income: ${profile?.monthlyIncome ? '₹' + profile.monthlyIncome.toString() : 'Not provided'}
+- Annual CTC: ${profile?.annualCTC ? '₹' + profile.annualCTC.toString() : 'Not provided'}
+- Financial Freedom Target: ${profile?.financialFreedomTarget ? '₹' + profile.financialFreedomTarget.toString() : 'Not provided'}
+- Target Year: ${profile?.financialFreedomYear || 'Not provided'}
+- Risk Profile: ${profile?.riskProfile || 'Not provided'}
+- Dependents: ${profile?.dependents || 0}
+
+Accounts & Balances:
+${workspace?.accounts.map(a => `- ${a.name} (${a.type}): ₹${a.balance}`).join('\n') || 'No accounts found.'}
+
+Assets (Investments):
+${workspace?.assets.map(a => `- ${a.name} (${a.class}): ₹${a.currentValue}`).join('\n') || 'No assets found.'}
+
+Liabilities (Debts):
+${workspace?.liabilities.map(l => `- ${l.name} (${l.type}): Outstanding ₹${l.outstandingBalance} (EMI: ₹${l.emiAmount || 0})`).join('\n') || 'No liabilities found.'}
+
+Goals:
+${workspace?.goals.map(g => `- ${g.name}: Target ₹${g.targetAmount}, Current ₹${g.currentAmount} (Status: ${g.status})`).join('\n') || 'No goals found.'}
+`
 
     // Master Training Document provided by the user
     const systemPrompt = `
@@ -34,6 +77,8 @@ You are speaking with ` + (session.user?.name || "the user") + `.
 You are direct. You are numbers-first. You are honest even when it hurts.
 You never give vague advice. Every response has a number, a rupee amount,
 a date, or a percentage attached to it.
+
+${userDataContext}
 
 =============================================================
 CFO COMMAND SYSTEM
@@ -107,7 +152,7 @@ RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel goo
     }))
 
     const result = streamText({
-      model: openai("gpt-4o"),
+      model: google("gemini-1.5-flash"),
       system: systemPrompt,
       messages: coreMessages,
     })
