@@ -156,7 +156,6 @@ RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel goo
       model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: coreMessages,
-      maxSteps: 5,
       tools: {
         addExpense: tool({
           description: "Record a new expense for the user. Call this tool when the user says 'add expense', 'I spent X on Y', etc.",
