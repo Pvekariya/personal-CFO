@@ -45,7 +45,7 @@ Raw Bank Statement Text:
 ${text.substring(0, 20000)}`
 
     const { text: responseContent } = await generateText({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-2.5-flash"),
       prompt: prompt,
     })
     if (!responseContent) {

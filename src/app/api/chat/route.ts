@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google"
-import { streamText } from "ai"
+import { streamText, tool } from "ai"
+import { z } from "zod"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/db/client"
 
@@ -138,13 +139,13 @@ RULE 2 — FF IMPACT ALWAYS: Every major financial decision must include the imp
 RULE 3 — CHALLENGE BAD DECISIONS DIRECTLY: If a spending decision threatens goals, say so directly. No sugarcoating.
 RULE 4 — THREE OPTIONS ALWAYS: Provide Option A (Conservative), Option B (Recommended), Option C (Aggressive) for major decisions.
 RULE 5 — SHOW THE OPPORTUNITY COST: Show what spent money becomes if invested instead (e.g. "₹25 lakh today = ₹1.85 crore in 15 years at 12% CAGR").
-RULE 6 — SHORT RESPONSES, HIGH DENSITY: Never write paragraphs when a table/bullet points work better. Dense with numbers.
+RULE 6 — BE SHORT BUT HUMAN: Keep it crisp and use bullet points for data, but you MUST act like a real human CFO. Address them by name (e.g., "Pratik, here are the numbers."). Add a touch of personality—be witty, encouraging, or slightly stern if they make a bad financial decision. Do not sound like a robotic script.
 RULE 7 — SEASONAL AWARENESS: Consider tax saving in Feb-Mar, review in Oct-Nov.
 RULE 8 — INDIA-SPECIFIC ALWAYS: Use ₹ symbol, Lakh/crore notation (₹1L, ₹1Cr), Indian tax slabs, inflation (6-7%), equity (12%), debt (7-8%).
-RULE 9 — MEMORY: Remember past decisions.
+RULE 9 — ACTIONS / TOOLS: If a user asks you to record or add an expense, immediately use the 'addExpense' tool. Do not ask for confirmation unless information is completely missing.
 RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel good — it is to make you rich.
 
-*CRITICAL DIRECTIVE*: If the user does not provide their exact data yet (since they haven't filled out the questionnaire), boldly demand the missing numbers before making any assumptions!
+*CRITICAL DIRECTIVE*: If the user does not provide their exact data yet, boldly demand the missing numbers before making any assumptions!
     `
     const coreMessages = messages.map((m: any) => ({
       role: m.role,
@@ -152,12 +153,54 @@ RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel goo
     }))
 
     const result = streamText({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: coreMessages,
+      maxSteps: 5,
+      tools: {
+        addExpense: tool({
+          description: "Record a new expense for the user. Call this tool when the user says 'add expense', 'I spent X on Y', etc.",
+          parameters: z.object({
+            amount: z.number().describe("The amount of the expense in INR"),
+            description: z.string().describe("Short description or category of the expense"),
+            date: z.string().optional().describe("Date of the expense in YYYY-MM-DD format. Defaults to today."),
+          }),
+          execute: async ({ amount, description, date }) => {
+            const account = workspace?.accounts[0]
+            if (!workspace || !account) {
+              return "Error: Could not find an active account to deduct the expense from. Please create an account first."
+            }
+            
+            try {
+              await prisma.transaction.create({
+                data: {
+                  workspaceId: workspace.id,
+                  accountId: account.id,
+                  type: "EXPENSE",
+                  status: "COMPLETED",
+                  amount: amount,
+                  amountInBaseCurrency: amount,
+                  currency: "INR",
+                  description: description,
+                  date: date ? new Date(date) : new Date(),
+                  notes: "Added via AI Assistant",
+                }
+              })
+              
+              await prisma.account.update({
+                where: { id: account.id },
+                data: { balance: { decrement: amount } }
+              })
+              
+              return `Successfully recorded ₹${amount} for ${description}. The account balance was updated.`
+            } catch (err: any) {
+              return `Error saving transaction: ${err.message}`
+            }
+          }
+        })
+      }
     })
-
-    return result.toTextStreamResponse()
+    return result.toDataStreamResponse ? result.toDataStreamResponse() : result.toUIMessageStreamResponse ? result.toUIMessageStreamResponse() : result.toTextStreamResponse()
   } catch (error) {
     console.error("Chat API error:", error)
     return new Response("Internal Server Error", { status: 500 })

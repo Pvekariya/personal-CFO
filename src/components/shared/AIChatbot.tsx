@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useChat } from "@ai-sdk/react"
+import ReactMarkdown from "react-markdown"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 
 export function AIChatbot() {
@@ -78,7 +79,15 @@ export function AIChatbot() {
               }`}
             >
               {m.parts?.map((part, i) => {
-                if (part.type === "text") return <span key={i}>{part.text}</span>
+                if (part.type === "text") {
+                  return (
+                    <div key={i} className="text-sm space-y-2 [&>p]:leading-relaxed [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4 [&>h1]:font-bold [&>h1]:text-base [&>h2]:font-bold [&>h2]:text-sm [&>h3]:font-semibold [&>strong]:font-bold [&>strong]:text-foreground [&>code]:bg-foreground/10 [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>pre]:bg-foreground/10 [&>pre]:p-2 [&>pre]:rounded overflow-hidden break-words">
+                      <ReactMarkdown>
+                        {part.text}
+                      </ReactMarkdown>
+                    </div>
+                  )
+                }
                 return null
               })}
             </div>
