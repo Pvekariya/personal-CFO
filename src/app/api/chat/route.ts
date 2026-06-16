@@ -158,7 +158,8 @@ RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel goo
       messages: coreMessages,
     })
 
-    return result.toDataStreamResponse ? result.toDataStreamResponse() : result.toUIMessageStreamResponse ? result.toUIMessageStreamResponse() : result.toTextStreamResponse()
+    const anyResult = result as any
+    return anyResult.toDataStreamResponse ? anyResult.toDataStreamResponse() : anyResult.toUIMessageStreamResponse ? anyResult.toUIMessageStreamResponse() : anyResult.toTextStreamResponse()
   } catch (error) {
     console.error("Chat API error:", error)
     return new Response("Internal Server Error", { status: 500 })
