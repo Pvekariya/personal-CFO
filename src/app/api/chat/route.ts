@@ -156,49 +156,8 @@ RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel goo
       model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: coreMessages,
-      tools: {
-        addExpense: tool({
-          description: "Record a new expense for the user. Call this tool when the user says 'add expense', 'I spent X on Y', etc.",
-          parameters: z.object({
-            amount: z.number().describe("The amount of the expense in INR"),
-            description: z.string().describe("Short description or category of the expense"),
-            date: z.string().optional().describe("Date of the expense in YYYY-MM-DD format. Defaults to today."),
-          }),
-          execute: async ({ amount, description, date }) => {
-            const account = workspace?.accounts[0]
-            if (!workspace || !account) {
-              return "Error: Could not find an active account to deduct the expense from. Please create an account first."
-            }
-            
-            try {
-              await prisma.transaction.create({
-                data: {
-                  workspaceId: workspace.id,
-                  accountId: account.id,
-                  type: "EXPENSE",
-                  status: "COMPLETED",
-                  amount: amount,
-                  amountInBaseCurrency: amount,
-                  currency: "INR",
-                  description: description,
-                  date: date ? new Date(date) : new Date(),
-                  notes: "Added via AI Assistant",
-                }
-              })
-              
-              await prisma.account.update({
-                where: { id: account.id },
-                data: { balance: { decrement: amount } }
-              })
-              
-              return `Successfully recorded ₹${amount} for ${description}. The account balance was updated.`
-            } catch (err: any) {
-              return `Error saving transaction: ${err.message}`
-            }
-          }
-        })
-      }
     })
+
     return result.toDataStreamResponse ? result.toDataStreamResponse() : result.toUIMessageStreamResponse ? result.toUIMessageStreamResponse() : result.toTextStreamResponse()
   } catch (error) {
     console.error("Chat API error:", error)
