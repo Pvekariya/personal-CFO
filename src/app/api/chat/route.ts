@@ -3,6 +3,7 @@ import { streamText, tool } from "ai"
 import { z } from "zod"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/db/client"
+import { convertCurrency } from "@/lib/currency"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -152,10 +153,156 @@ RULE 10 — HONEST EVEN WHEN HARSH: A real CFO's job is not to make you feel goo
       content: m.content ? m.content : (m.parts ? m.parts.map((p: any) => p.text).join("") : "")
     }))
 
+    const wsId = workspace?.id
+    if (!wsId) {
+      return new Response("Workspace Setup Required", { status: 400 })
+    }
+
     const result = streamText({
       model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: coreMessages,
+      tools: {
+        addTransaction: {
+          description: "Add a new transaction (income, expense, or transfer) to the database.",
+          parameters: z.object({
+            amount: z.number().describe("The transaction amount in INR"),
+            type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]).describe("Type of transaction"),
+            description: z.string().describe("Description/Note of the transaction"),
+            accountName: z.string().optional().describe("Name of the bank account (e.g. HDFC Savings) to match"),
+            date: z.string().optional().describe("Date of transaction in YYYY-MM-DD format (defaults to today)"),
+            categoryName: z.string().optional().describe("Category of transaction (e.g. Food, Utilities, Salary)"),
+          }) as any,
+          execute: async (args: any) => {
+            const { amount, type, description, accountName, date, categoryName } = args;
+            let account = await prisma.account.findFirst({
+              where: { 
+                workspaceId: wsId,
+                isActive: true,
+                name: accountName ? { contains: accountName, mode: "insensitive" } : undefined
+              }
+            })
+
+            if (!account) {
+              account = await prisma.account.findFirst({
+                where: { workspaceId: wsId, isActive: true }
+              })
+            }
+
+            if (!account) {
+              return { success: false, error: "No active bank accounts found. Please add a bank account first." }
+            }
+
+            let category = null
+            if (categoryName) {
+              category = await prisma.category.findFirst({
+                where: {
+                  workspaceId: wsId,
+                  name: { contains: categoryName, mode: "insensitive" }
+                }
+              })
+              if (!category) {
+                category = await prisma.category.create({
+                  data: {
+                    workspaceId: wsId,
+                    name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1).toLowerCase(),
+                    group: type === "INCOME" ? "INVESTMENT" : "NEED",
+                    icon: type === "INCOME" ? "💰" : "🏷️"
+                  }
+                })
+              }
+            }
+
+            const workspace = await prisma.workspace.findUnique({
+              where: { id: wsId },
+              select: { currency: true }
+            })
+            const baseCurrency = workspace?.currency || "INR"
+            const amountInBaseCurrency = await convertCurrency(amount, account.currency, baseCurrency)
+
+            const transaction = await prisma.transaction.create({
+              data: {
+                workspaceId: wsId,
+                accountId: account.id,
+                categoryId: category?.id || null,
+                amount,
+                currency: account.currency,
+                type: type === "INCOME" ? "INCOME" : type === "EXPENSE" ? "EXPENSE" : "TRANSFER",
+                amountInBaseCurrency,
+                description,
+                date: date ? new Date(date) : new Date(),
+              }
+            })
+
+            const balanceDelta = type === "INCOME" ? amount : -amount
+            await prisma.account.update({
+              where: { id: account.id },
+              data: { balance: (Number(account.balance) + balanceDelta).toString() }
+            })
+
+            return { 
+              success: true, 
+              data: {
+                id: transaction.id,
+                amount: transaction.amount.toString(),
+                type: transaction.type,
+                description: transaction.description,
+                accountName: account.name,
+                categoryName: category?.name || null
+              }
+            }
+          }
+        },
+
+        addAccount: {
+          description: "Add a new bank account or wallet to the database.",
+          parameters: z.object({
+            name: z.string().describe("The name of the account (e.g. HDFC Savings)"),
+            type: z.enum(["SAVINGS", "CURRENT", "SALARY", "FIXED_DEPOSIT", "PPF", "EPF", "NPS", "WALLET", "CRYPTO_WALLET"]).describe("Type of account"),
+            bankName: z.string().optional().describe("Name of the bank (e.g. HDFC Bank)"),
+            balance: z.number().describe("Initial balance of the account in INR"),
+          }) as any,
+          execute: async (args: any) => {
+            const { name, type, bankName, balance } = args;
+            const account = await prisma.account.create({
+              data: {
+                workspaceId: wsId,
+                name,
+                type,
+                bankName: bankName || null,
+                balance: balance.toString(),
+                currency: "INR",
+              }
+            })
+            return { success: true, data: account }
+          }
+        },
+
+        addGoal: {
+          description: "Add a new financial target/goal to the database.",
+          parameters: z.object({
+            name: z.string().describe("Name of the goal (e.g. Buy a Car, Retirement)"),
+            targetAmount: z.number().describe("Target amount to save in INR"),
+            currentAmount: z.number().optional().describe("Current amount already saved in INR"),
+            targetDate: z.string().describe("Target date of the goal in YYYY-MM-DD format"),
+          }) as any,
+          execute: async (args: any) => {
+            const { name, targetAmount, currentAmount, targetDate } = args;
+            const goal = await prisma.goal.create({
+              data: {
+                workspaceId: wsId,
+                name,
+                type: "CUSTOM",
+                status: "ON_TRACK",
+                targetAmount,
+                currentAmount: currentAmount || 0,
+                targetDate: new Date(targetDate),
+              }
+            })
+            return { success: true, data: goal }
+          }
+        }
+      } as any
     })
 
     const anyResult = result as any

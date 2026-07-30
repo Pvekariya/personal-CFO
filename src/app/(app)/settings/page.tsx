@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
+import { WhatsAppIntegrationPortal } from "@/components/settings/WhatsAppIntegrationPortal"
+import { LiveCurrencyConverter } from "@/components/settings/LiveCurrencyConverter"
 
 export default function SettingsPage() {
   const { update } = useSession()
@@ -393,6 +395,8 @@ export default function SettingsPage() {
                 <option value="EUR">EUR (€)</option>
                 <option value="GBP">GBP (£)</option>
                 <option value="AED">AED (د.إ)</option>
+                <option value="SGD">SGD (S$)</option>
+                <option value="CHF">CHF (Fr.)</option>
               </select>
             </div>
           </div>
@@ -480,6 +484,14 @@ export default function SettingsPage() {
           </div>
         </form>
       </div>
+
+      {/* Live Currency Converter & Exchange Calculator */}
+      <div className="mt-8">
+        <LiveCurrencyConverter />
+      </div>
+
+      {/* WhatsApp & Ingestion Portal */}
+      <WhatsAppIntegrationPortal />
     </div>
   )
 }

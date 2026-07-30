@@ -6,6 +6,7 @@ import {
   createAccountSchema,
   accountQuerySchema,
 } from "@/lib/validations/accounts"
+import { convertCurrency } from "@/lib/currency"
 
 // GET /api/v1/accounts — List accounts for workspace
 export async function GET(request: NextRequest) {
@@ -33,12 +34,34 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const accounts = await prisma.account.findMany({
-    where: where as any,
-    orderBy: [{ isDefault: "desc" }, { name: "asc" }],
-  })
+  const [accounts, workspace] = await Promise.all([
+    prisma.account.findMany({
+      where: where as any,
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    }),
+    prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { currency: true },
+    })
+  ])
 
-  return apiSuccess(accounts)
+  const baseCurrency = workspace?.currency || "INR"
+
+  const accountsWithConversion = await Promise.all(
+    accounts.map(async (account) => {
+      const convertedBalance = await convertCurrency(
+        Number(account.balance),
+        account.currency,
+        baseCurrency
+      )
+      return {
+        ...account,
+        convertedBalance: convertedBalance.toString(),
+      }
+    })
+  )
+
+  return apiSuccess(accountsWithConversion)
 }
 
 // POST /api/v1/accounts — Create a new account

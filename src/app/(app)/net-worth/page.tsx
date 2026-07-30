@@ -1,20 +1,18 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { formatCurrency, formatDate } from "@/lib/utils"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
-} from "recharts"
+import { cn, formatCurrency, formatDate } from "@/lib/utils"
+import dynamic from "next/dynamic"
+
+const FIREProjectionCalculator = dynamic(
+  () => import("@/components/shared/FIREProjectionCalculator").then((m) => m.FIREProjectionCalculator),
+  { ssr: false }
+)
+const NetWorthCharts = dynamic(
+  () => import("@/components/net-worth/NetWorthCharts").then((m) => m.NetWorthCharts),
+  { ssr: false }
+)
 
 type NetWorthSnapshot = {
   id: string
@@ -69,12 +67,14 @@ export default function NetWorthPage() {
   }
 
   // Format data for Recharts
-  const chartData = snapshots.map((s) => ({
-    date: formatDate(s.snapshotDate),
-    NetWorth: parseFloat(s.netWorth),
-    Assets: parseFloat(s.totalAssets),
-    Liabilities: parseFloat(s.totalLiabilities),
-  }))
+  const chartData = useMemo(() => {
+    return snapshots.map((s) => ({
+      date: formatDate(s.snapshotDate),
+      NetWorth: parseFloat(s.netWorth),
+      Assets: parseFloat(s.totalAssets),
+      Liabilities: parseFloat(s.totalLiabilities),
+    }))
+  }, [snapshots])
 
   const latestSnapshot = snapshots[snapshots.length - 1]
 
@@ -125,63 +125,13 @@ export default function NetWorthPage() {
             </div>
           </div>
 
-          {/* Line Chart for Net Worth Growth */}
-          <div className="rounded-xl border border-border bg-card p-6">
-            <h3 className="font-semibold text-lg border-b pb-4 mb-4">Net Worth Growth Over Time</h3>
-            <div className="h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorNW" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                  <XAxis dataKey="date" />
-                  <YAxis 
-                    tickFormatter={(value) => `₹${(value / 100000).toFixed(0)}L`}
-                    width={80}
-                  />
-                  <Tooltip 
-                    formatter={(value: any) => formatCurrency(Number(value || 0), currency)}
-                    labelClassName="text-foreground font-medium"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="NetWorth"
-                    stroke="#8884d8"
-                    fillOpacity={1}
-                    fill="url(#colorNW)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          {/* Interactive Net Worth Charts */}
+          <NetWorthCharts chartData={chartData} currency={currency} />
 
-          {/* Assets vs Liabilities Bar Chart */}
-          <div className="rounded-xl border border-border bg-card p-6">
-            <h3 className="font-semibold text-lg border-b pb-4 mb-4">Assets vs Liabilities</h3>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                  <XAxis dataKey="date" />
-                  <YAxis 
-                    tickFormatter={(value) => `₹${(value / 100000).toFixed(0)}L`}
-                    width={80}
-                  />
-                  <Tooltip 
-                    formatter={(value: any) => formatCurrency(Number(value || 0), currency)}
-                  />
-                  <Legend />
-                  <Bar dataKey="Assets" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Liabilities" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
+          {/* FIRE Projection Calculator */}
+          <FIREProjectionCalculator
+            currentNetWorth={latestSnapshot ? parseFloat(latestSnapshot.netWorth) : 500000}
+          />
         </div>
       )}
     </div>

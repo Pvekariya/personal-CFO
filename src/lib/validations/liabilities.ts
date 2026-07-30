@@ -26,7 +26,7 @@ export const createLiabilitySchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   nextDueDate: z.string().optional(),
-  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
+  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "CHF"]).default("INR"),
   isActive: z.boolean().default(true),
   isFormalAgreement: z.boolean().default(false),
   notes: z.string().max(1000).optional(),

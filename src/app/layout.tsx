@@ -39,6 +39,11 @@ export const metadata: Metadata = {
   authors: [{ name: "Personal CFO Team" }],
   creator: "Personal CFO OS",
   publisher: "Personal CFO OS",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Personal CFO",
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",

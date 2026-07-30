@@ -121,18 +121,22 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-manrope), sans-serif;
   }
   html {
     @apply font-sans;
+    font-family: var(--font-manrope), sans-serif;
   }
 }
 @layer base {
   body {
     @apply font-sans text-base leading-relaxed tracking-normal text-foreground relative overflow-x-hidden;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: var(--font-manrope), sans-serif;
   }
 
   body::before {
@@ -180,13 +184,18 @@
 }
 
 .premium-card {
-  @apply rounded-3xl border border-border/50 bg-card/40 backdrop-blur-md shadow-sm transition-all duration-300;
+  @apply rounded-2xl border border-border bg-card/70 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.015)] transition-all duration-300 relative overflow-hidden;
+}
+
+.dark .premium-card {
+  @apply bg-zinc-950/40 border-zinc-900;
 }
 
 .premium-card-hover {
-  @apply hover:shadow-[0_8px_30px_rgba(0,122,255,0.08)] hover:-translate-y-0.5 hover:bg-card/60;
+  @apply hover:shadow-[0_12px_24px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 hover:border-border/80 dark:hover:border-zinc-800 hover:bg-card/90;
 }
+
 .premium-glass {
-  @apply rounded-2xl border border-border/50 bg-card/60 backdrop-blur-2xl ring-1 ring-white/20 dark:ring-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.03)];
+  @apply rounded-2xl border border-border/60 bg-card/85 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.02)];
 }
 

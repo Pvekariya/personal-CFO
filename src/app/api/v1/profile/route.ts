@@ -103,10 +103,11 @@ export async function PATCH(request: Request) {
     }
 
     if (body.currency && session.user.workspaceId) {
-      await prisma.workspace.update({
-        where: { id: session.user.workspaceId },
-        data: { currency: body.currency },
-      })
+      await prisma.$executeRawUnsafe(
+        `UPDATE workspaces SET currency = $1::"CurrencyCode" WHERE id = $2`,
+        body.currency,
+        session.user.workspaceId
+      )
     }
 
     return NextResponse.json({ success: true })

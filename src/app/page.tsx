@@ -8,9 +8,5 @@ export default async function RootPage() {
     redirect("/login")
   }
 
-  if (!session.user.onboardingComplete) {
-    redirect("/onboarding/profile")
-  }
-
   redirect("/dashboard")
 }

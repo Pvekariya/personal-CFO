@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db/client"
 import bcrypt from "bcryptjs"
 import { signIn } from "@/auth"
+import { redirect } from "next/navigation"
 import { AuthError } from "next-auth"
 
 export async function registerAction(_prevState: string | undefined, formData: FormData) {
@@ -68,17 +69,22 @@ export async function registerAction(_prevState: string | undefined, formData: F
     })
 
     // Auto sign-in after successful registration
-    await signIn("credentials", {
+    const result = await signIn("credentials", {
       email,
       password,
-      redirectTo: "/onboarding/profile",
+      redirect: false,
+      redirectTo: "/dashboard",
     })
-  } catch (error: any) {
-    // MUST re-throw redirect errors from signIn
-    if (error instanceof AuthError) {
-      return "Account created but auto-login failed. Please sign in manually."
+
+    if (result?.error) {
+      return "Account created successfully, but auto-login failed. Please sign in."
     }
-    // Auth.js signIn throws NEXT_REDIRECT on success — let it through
-    throw error
+
+    redirect("/dashboard")
+  } catch (error: any) {
+    if ((error as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw error
+    }
+    return "Something went wrong during registration. Please try again."
   }
 }

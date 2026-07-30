@@ -24,6 +24,7 @@ export const currencyCodes = [
   "GBP",
   "AED",
   "SGD",
+  "CHF",
 ] as const
 
 export const createAccountSchema = z.object({

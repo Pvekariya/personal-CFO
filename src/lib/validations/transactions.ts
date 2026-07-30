@@ -24,7 +24,7 @@ export const createTransactionSchema = z.object({
   categoryId: z.string().optional(),
   type: z.enum(transactionTypes),
   amount: z.coerce.number().positive("Amount must be positive"),
-  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
+  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "CHF"]).default("INR"),
   description: z.string().max(500).optional(),
   notes: z.string().max(1000).optional(),
   merchant: z.string().max(200).optional(),

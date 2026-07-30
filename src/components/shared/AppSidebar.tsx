@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { SignOutButton } from "@/components/shared/SignOutButton"
@@ -12,6 +12,7 @@ const navItems = [
   { label: "Investments", href: "/investments", icon: "https://img.icons8.com/ios/50/line-chart.png" },
   { label: "Liabilities", href: "/liabilities", icon: "https://img.icons8.com/ios/50/debt.png" },
   { label: "Analytics", href: "/analytics", icon: "https://img.icons8.com/ios/50/pie-chart.png" },
+  { label: "Reports", href: "/reports", icon: "https://img.icons8.com/ios/50/print.png" },
   { label: "Net Worth", href: "/net-worth", icon: "https://img.icons8.com/ios/50/diamond--v1.png" },
   { label: "Vault", href: "/vault", icon: "https://img.icons8.com/ios/50/safe.png" },
   { label: "Tax", href: "/tax", icon: "https://img.icons8.com/ios/50/tax.png" },
@@ -23,6 +24,7 @@ const navItems = [
 export function AppSidebar({ userName, userEmail }: { userName?: string | null, userEmail?: string | null }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const pathname = usePathname()
+  const sidebarRef = useRef<HTMLElement>(null)
 
   // Auto collapse on mobile initially
   useEffect(() => {
@@ -36,13 +38,6 @@ export function AppSidebar({ userName, userEmail }: { userName?: string | null, 
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  // Auto collapse after selection (navigation)
-  useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setIsCollapsed(true)
-    }
-  }, [pathname])
-
   // Listen to custom toggle event from TopHeader
   useEffect(() => {
     const handleToggle = () => setIsCollapsed(prev => !prev)
@@ -50,9 +45,27 @@ export function AppSidebar({ userName, userEmail }: { userName?: string | null, 
     return () => window.removeEventListener("toggleSidebar", handleToggle)
   }, [])
 
+  // Click/touch outside to auto-retract on mobile
+  useEffect(() => {
+    function handleClickOutside(event: TouchEvent | MouseEvent) {
+      if (window.innerWidth < 768 && !isCollapsed) {
+        if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+          setIsCollapsed(true)
+        }
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("touchstart", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("touchstart", handleClickOutside)
+    }
+  }, [isCollapsed])
+
   return (
     <>
       <aside 
+        ref={sidebarRef}
         className={`
           border-r border-border bg-sidebar flex flex-col transition-all duration-300 z-20
           ${isCollapsed ? "w-16 items-center" : "w-64"}
@@ -90,28 +103,53 @@ export function AppSidebar({ userName, userEmail }: { userName?: string | null, 
         <nav className={`flex-1 p-2 space-y-1 overflow-y-auto overflow-x-hidden ${isCollapsed ? "w-full" : ""}`}>
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 rounded-xl text-sm transition-all group relative overflow-hidden
+            const itemClasses = `
+                  flex items-center gap-3 rounded-xl text-sm transition-all group relative overflow-hidden w-full
                   ${isCollapsed ? "justify-center p-3" : "px-3 py-2.5"}
                   ${isActive 
                     ? "text-primary font-bold shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ring-1 ring-border/50 bg-gradient-to-r from-primary/10 to-primary/5" 
                     : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                `}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <img 
-                  src={item.icon} 
-                  alt={item.label} 
-                  className={`w-5 h-5 transition-opacity dark:invert ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`} 
-                />
-                {!isCollapsed && (
-                  <span className="whitespace-nowrap">{item.label}</span>
-                )}
-              </Link>
+                `
+            return (
+              isActive ? (
+                <div
+                  key={item.href}
+                  className={itemClasses}
+                  title={isCollapsed ? item.label : undefined}
+                  aria-current="page"
+                >
+                  <img
+                    src={item.icon}
+                    alt={item.label}
+                    className={`w-5 h-5 transition-opacity dark:invert ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}
+                  />
+                  {!isCollapsed && (
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch={false}
+                  className={itemClasses}
+                  title={isCollapsed ? item.label : undefined}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      setIsCollapsed(true)
+                    }
+                  }}
+                >
+                  <img
+                    src={item.icon}
+                    alt={item.label}
+                    className={`w-5 h-5 transition-opacity dark:invert ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}
+                  />
+                  {!isCollapsed && (
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  )}
+                </Link>
+              )
             )
           })}
         </nav>

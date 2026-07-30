@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import dynamic from "next/dynamic"
+
+const GoalSIPSimulator = dynamic(
+  () => import("@/components/goals/GoalSIPSimulator").then((m) => m.GoalSIPSimulator),
+  { ssr: false }
+)
 
 type Goal = {
   id: string
@@ -67,6 +73,10 @@ export default function GoalsPage() {
   useEffect(() => {
     fetchGoals()
   }, [fetchGoals])
+
+  const handleFieldChange = (field: keyof typeof formData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   function resetForm() {
     setFormData({
@@ -188,7 +198,7 @@ export default function GoalsPage() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => handleFieldChange("name", e.target.value)}
                 placeholder="e.g. Dream Home 2030"
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -199,7 +209,7 @@ export default function GoalsPage() {
               <label className="text-sm font-medium">Goal Type *</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => handleFieldChange("type", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {GOAL_TYPES.map((type) => (
@@ -214,8 +224,9 @@ export default function GoalsPage() {
               <label className="text-sm font-medium">Target Amount (Today's Value) *</label>
               <input
                 type="number"
+                inputMode="decimal"
                 value={formData.targetAmount}
-                onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                onChange={(e) => handleFieldChange("targetAmount", e.target.value)}
                 placeholder="e.g. 1000000"
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -226,8 +237,9 @@ export default function GoalsPage() {
               <label className="text-sm font-medium">Current Saved Amount</label>
               <input
                 type="number"
+                inputMode="decimal"
                 value={formData.currentAmount}
-                onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
+                onChange={(e) => handleFieldChange("currentAmount", e.target.value)}
                 placeholder="e.g. 50000"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -238,7 +250,7 @@ export default function GoalsPage() {
               <input
                 type="date"
                 value={formData.targetDate}
-                onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                onChange={(e) => handleFieldChange("targetDate", e.target.value)}
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -248,9 +260,10 @@ export default function GoalsPage() {
               <label className="text-sm font-medium">Inflation Assumption (%)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 value={formData.inflationRate}
-                onChange={(e) => setFormData({ ...formData, inflationRate: e.target.value })}
+                onChange={(e) => handleFieldChange("inflationRate", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
@@ -259,9 +272,10 @@ export default function GoalsPage() {
               <label className="text-sm font-medium">Expected Return CAGR (%)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 value={formData.expectedReturn}
-                onChange={(e) => setFormData({ ...formData, expectedReturn: e.target.value })}
+                onChange={(e) => handleFieldChange("expectedReturn", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
@@ -299,50 +313,50 @@ export default function GoalsPage() {
           {goals.map((goal) => (
             <div
               key={goal.id}
-              className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm"
+              className="premium-card premium-card-hover p-5 space-y-4"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold text-lg">{goal.name}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                  <h3 className="font-bold text-base tracking-tight">{goal.name}</h3>
+                  <p className="text-xs text-muted-foreground/80 mt-1 font-medium">
                     {goal.type.replace(/_/g, " ")} • Target: {formatDate(goal.targetDate)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Today's Value</p>
-                  <p className="font-bold">{formatCurrency(goal.targetAmount)}</p>
+                  <p className="text-xs text-muted-foreground">Today's Value</p>
+                  <p className="font-semibold text-sm font-mono">{formatCurrency(goal.targetAmount)}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border">
+              <div className="grid grid-cols-2 gap-3 bg-muted/40 p-4 rounded-xl border border-border/40">
                 <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Future Cost (Inflation @ {goal.inflationRate}%)</p>
-                  <p className="text-lg font-bold text-rose-500 mt-0.5">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Future Cost (Inflation @ {goal.inflationRate}%)</p>
+                  <p className="text-base font-bold text-rose-500 mt-1 font-mono">
                     {formatCurrency(goal.inflationAdjustedTarget || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Required Monthly SIP (@ {goal.expectedReturn}%)</p>
-                  <p className="text-lg font-bold text-emerald-500 mt-0.5">
-                    {formatCurrency(goal.requiredSIP || 0)} <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Required Monthly SIP (@ {goal.expectedReturn}%)</p>
+                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
+                    {formatCurrency(goal.requiredSIP || 0)} <span className="text-xs font-normal text-muted-foreground font-sans">/mo</span>
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-1">
                 <p className="text-xs text-muted-foreground">
-                  Saved so far: <span className="font-medium text-foreground">{formatCurrency(goal.currentAmount)}</span>
+                  Saved so far: <span className="font-semibold text-foreground font-mono">{formatCurrency(goal.currentAmount)}</span>
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => startEdit(goal)}
-                    className="text-xs text-primary hover:underline transition-colors"
+                    className="text-xs font-semibold px-2 py-1 rounded bg-secondary/50 text-foreground hover:bg-secondary transition-colors"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(goal.id)}
-                    className="text-xs text-destructive hover:underline transition-colors"
+                    className="text-xs font-semibold px-2 py-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                   >
                     Delete
                   </button>
@@ -351,6 +365,11 @@ export default function GoalsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Goal SIP Sufficiency & Step-Up Simulator */}
+      {!loading && goals.length > 0 && (
+        <GoalSIPSimulator goals={goals} />
       )}
     </div>
   )

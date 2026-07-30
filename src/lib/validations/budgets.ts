@@ -4,7 +4,7 @@ export const createBudgetSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   name: z.string().min(1, "Budget name is required").max(100),
   amount: z.coerce.number().positive("Amount must be greater than 0"),
-  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
+  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "CHF"]).default("INR"),
   period: z.enum(["MONTHLY", "WEEKLY", "YEARLY"]),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),

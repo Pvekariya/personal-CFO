@@ -1,9 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { TopHeader } from "@/components/shared/TopHeader"
+import dynamic from "next/dynamic"
+
+const CashDragAnalyzer = dynamic(
+  () => import("@/components/accounts/CashDragAnalyzer").then((m) => m.CashDragAnalyzer),
+  { ssr: false }
+)
 
 type Account = {
   id: string
@@ -30,7 +36,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   PPF: "PPF",
   EPF: "EPF",
   NPS: "NPS",
-  WALLET: "Wallet",
+  WALLET: "Cash / Wallet",
   CRYPTO_WALLET: "Crypto Wallet",
   BUSINESS_CURRENT: "Business Current",
   BUSINESS_SAVINGS: "Business Savings",
@@ -75,6 +81,10 @@ export default function AccountsPage() {
   useEffect(() => {
     fetchAccounts()
   }, [fetchAccounts])
+
+  const handleFieldChange = (field: keyof typeof formData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   function resetForm() {
     setFormData({
@@ -157,10 +167,9 @@ export default function AccountsPage() {
     }
   }
 
-  const totalBalance = accounts.reduce(
-    (sum, a) => sum + parseFloat(a.balance),
-    0
-  )
+  const totalBalance = useMemo(() => {
+    return accounts.reduce((sum, a) => sum + parseFloat(a.balance || "0"), 0)
+  }, [accounts])
 
   return (
     <div className="space-y-6">
@@ -180,14 +189,24 @@ export default function AccountsPage() {
       </TopHeader>
 
       {/* Total Balance Card */}
-      <div className="premium-card p-5">
-        <p className="text-sm font-medium text-muted-foreground">
-          Total Balance
-        </p>
-        <p className="text-3xl font-bold mt-1">{formatCurrency(totalBalance)}</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}
-        </p>
+      <div className="premium-card p-6 bg-gradient-to-br from-primary/5 via-secondary/10 to-transparent border-primary/20 relative overflow-hidden group">
+        <div className="absolute right-0 bottom-0 w-32 h-32 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
+        <div className="flex justify-between items-center relative z-10">
+          <div>
+            <p className="text-xs font-bold text-primary uppercase tracking-widest">
+              Total Consolidated Balance
+            </p>
+            <p className="text-4xl font-extrabold mt-1.5 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80 font-mono">
+              {formatCurrency(totalBalance)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
+              Aggregated across {accounts.length} active account{accounts.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 shrink-0">
+            <img src="https://img.icons8.com/ios/50/wallet.png" alt="Wallet" className="w-8 h-8 dark:invert opacity-90" />
+          </div>
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -212,9 +231,7 @@ export default function AccountsPage() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => handleFieldChange("name", e.target.value)}
                 placeholder="e.g. HDFC Savings"
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -225,9 +242,7 @@ export default function AccountsPage() {
               <label className="text-sm font-medium">Account Type *</label>
               <select
                 value={formData.type}
-                onChange={(e) =>
-                  setFormData({ ...formData, type: e.target.value })
-                }
+                onChange={(e) => handleFieldChange("type", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {ACCOUNT_TYPES.map((type) => (
@@ -243,9 +258,7 @@ export default function AccountsPage() {
               <input
                 type="text"
                 value={formData.bankName}
-                onChange={(e) =>
-                  setFormData({ ...formData, bankName: e.target.value })
-                }
+                onChange={(e) => handleFieldChange("bankName", e.target.value)}
                 placeholder="e.g. HDFC Bank"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -256,9 +269,7 @@ export default function AccountsPage() {
               <input
                 type="text"
                 value={formData.accountNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, accountNumber: e.target.value })
-                }
+                onChange={(e) => handleFieldChange("accountNumber", e.target.value)}
                 placeholder="e.g. 50100XXXXXXX"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -269,9 +280,7 @@ export default function AccountsPage() {
               <input
                 type="text"
                 value={formData.ifscCode}
-                onChange={(e) =>
-                  setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })
-                }
+                onChange={(e) => handleFieldChange("ifscCode", e.target.value.toUpperCase())}
                 placeholder="e.g. HDFC0001234"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -282,9 +291,7 @@ export default function AccountsPage() {
               <input
                 type="text"
                 value={formData.upiId}
-                onChange={(e) =>
-                  setFormData({ ...formData, upiId: e.target.value })
-                }
+                onChange={(e) => handleFieldChange("upiId", e.target.value)}
                 placeholder="e.g. user@okhdfc"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -294,11 +301,10 @@ export default function AccountsPage() {
               <label className="text-sm font-medium">Current Balance (₹)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={formData.balance}
-                onChange={(e) =>
-                  setFormData({ ...formData, balance: e.target.value })
-                }
+                onChange={(e) => handleFieldChange("balance", e.target.value)}
                 placeholder="e.g. 10000"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -309,9 +315,7 @@ export default function AccountsPage() {
             <label className="text-sm font-medium">Notes</label>
             <textarea
               value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              onChange={(e) => handleFieldChange("notes", e.target.value)}
               placeholder="Any notes about this account..."
               rows={2}
               className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -323,9 +327,7 @@ export default function AccountsPage() {
               type="checkbox"
               id="isDefault"
               checked={formData.isDefault}
-              onChange={(e) =>
-                setFormData({ ...formData, isDefault: e.target.checked })
-              }
+              onChange={(e) => handleFieldChange("isDefault", e.target.checked)}
               className="h-4 w-4 rounded border-input"
             />
             <label htmlFor="isDefault" className="text-sm">
@@ -363,65 +365,92 @@ export default function AccountsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {accounts.map((account) => (
-            <div
-              key={account.id}
-              className="premium-card premium-card-hover p-5 space-y-4 group"
-            >
-              <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
-                      <img src="https://img.icons8.com/ios/50/museum.png" alt="Bank" className="w-5 h-5 dark:invert opacity-80" />
+          {accounts.map((account) => {
+            const maskedNumber = account.accountNumber 
+              ? `•••• ${account.accountNumber.slice(-4)}`
+              : ""
+
+            const bankInitials = account.bankName 
+              ? account.bankName.replace(/bank/i, "").trim().substring(0, 2).toUpperCase()
+              : account.name.substring(0, 2).toUpperCase()
+
+            return (
+              <div
+                key={account.id}
+                className="premium-card premium-card-hover p-4.5 flex flex-col justify-between h-[130px] relative group"
+              >
+                {/* Top Row: Avatar, Names, and Actions */}
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs tracking-wider shrink-0 shadow-inner">
+                      {bankInitials}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-base tracking-tight">{account.name}</h3>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-bold text-sm tracking-tight text-foreground leading-tight">
+                          {account.name}
+                        </h4>
                         {account.isDefault && (
-                          <span className="text-[10px] uppercase font-bold tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          <span className="text-[8px] font-bold text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                             Default
                           </span>
                         )}
                       </div>
-                    <p className="text-xs text-muted-foreground mt-1 font-medium">
-                      {ACCOUNT_TYPE_LABELS[account.type] || account.type}
-                      {account.bankName ? ` · ${account.bankName}` : ""}
-                      {account.accountNumber ? ` · ${account.accountNumber.slice(-4)}` : ""}
-                    </p>
-                    {(account.ifscCode || account.upiId) && (
-                      <p className="text-[10px] text-muted-foreground/80 mt-0.5">
-                        {account.ifscCode ? `IFSC: ${account.ifscCode}` : ""}
-                        {account.ifscCode && account.upiId ? " | " : ""}
-                        {account.upiId ? `UPI: ${account.upiId}` : ""}
+                      <p className="text-[10px] text-muted-foreground font-medium mt-0.5 truncate max-w-[120px] sm:max-w-[180px]">
+                        {ACCOUNT_TYPE_LABELS[account.type] || account.type}
+                        {account.bankName ? ` • ${account.bankName}` : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Clean, minimalist actions in top-right */}
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => startEdit(account)}
+                      className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      title="Edit Account"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(account.id)}
+                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors cursor-pointer"
+                      title="Delete Account"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bottom Row: Balance and Masks */}
+                <div className="flex justify-between items-end pt-2">
+                  <div className="space-y-0.5">
+                    {maskedNumber && (
+                      <p className="text-[10px] text-muted-foreground font-mono">
+                        AC: {maskedNumber}
+                      </p>
+                    )}
+                    {account.upiId && (
+                      <p className="text-[9px] text-muted-foreground/80 font-mono">
+                        UPI: {account.upiId}
                       </p>
                     )}
                   </div>
+                  <div className="text-right">
+                    <p className="text-base font-bold text-foreground font-mono tracking-tight leading-none">
+                      {formatCurrency(account.balance)}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
-                  {formatCurrency(account.balance)}
-                </p>
               </div>
-
-              {account.notes && (
-                <p className="text-xs text-muted-foreground">{account.notes}</p>
-              )}
-
-              <div className="flex gap-2 pt-2 border-t border-border/40">
-                <button
-                  onClick={() => startEdit(account)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-secondary/50 text-foreground hover:bg-secondary transition-colors"
-                >
-                  Edit Account
-                </button>
-                <button
-                  onClick={() => handleDelete(account.id)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
+      )}
+
+      {/* CFO Cash Drag & Yield Drag Analyzer */}
+      {!loading && accounts.length > 0 && (
+        <CashDragAnalyzer accounts={accounts} />
       )}
     </div>
   )

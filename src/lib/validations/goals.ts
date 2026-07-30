@@ -33,7 +33,7 @@ export const createGoalSchema = z.object({
   priority: z.enum(goalPriorities).default("MEDIUM"),
   targetAmount: z.coerce.number().positive("Target amount must be greater than 0"),
   currentAmount: z.coerce.number().min(0).default(0),
-  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
+  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "CHF"]).default("INR"),
   targetDate: z.string().min(1, "Target date is required"),
   inflationRate: z.coerce.number().min(0).max(30).optional(),
   expectedReturn: z.coerce.number().min(0).max(100).optional(),

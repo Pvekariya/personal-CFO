@@ -1,12 +1,24 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { createTransactionSchema } from "@/lib/validations/transactions"
-import { StatementImporter } from "@/components/shared/StatementImporter"
-import { DaybookInsights } from "@/components/shared/DaybookInsights"
 import { TopHeader } from "@/components/shared/TopHeader"
+import dynamic from "next/dynamic"
+
+const DaybookInsights = dynamic(
+  () => import("@/components/shared/DaybookInsights").then((m) => m.DaybookInsights),
+  { ssr: false }
+)
+const StatementImporter = dynamic(
+  () => import("@/components/shared/StatementImporter").then((m) => m.StatementImporter),
+  { ssr: false }
+)
+const StatementIngestionModal = dynamic(
+  () => import("@/components/transactions/StatementIngestionModal").then((m) => m.StatementIngestionModal),
+  { ssr: false }
+)
 
 type Category = {
   id: string
@@ -306,12 +318,30 @@ export default function TransactionsPage() {
     }
   }
 
-  // Filter categories based on transaction type
-  const filteredCategories = categories.filter((c) => {
-    if (formData.type === "INCOME") return c.group === "INCOME"
-    if (formData.type === "INVESTMENT") return c.group === "INVESTMENT"
-    return c.group !== "INCOME"
-  })
+  // Filter categories based on transaction type (optimized with useMemo)
+  const filteredCategories = useMemo(() => {
+    return categories.filter((c) => {
+      if (formData.type === "INCOME") return c.group === "INCOME"
+      if (formData.type === "INVESTMENT") return c.group === "INVESTMENT"
+      return c.group !== "INCOME"
+    })
+  }, [categories, formData.type])
+
+  // Group transactions by date (optimized with useMemo)
+  const groupedTransactions = useMemo(() => {
+    const map = transactions.reduce((acc, txn) => {
+      const dateStr = new Date(txn.date).toLocaleDateString(undefined, {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+      if (!acc[dateStr]) acc[dateStr] = []
+      acc[dateStr].push(txn)
+      return acc
+    }, {} as Record<string, Transaction[]>)
+    return Object.entries(map)
+  }, [transactions])
 
   return (
     <div className="space-y-6">
@@ -320,6 +350,7 @@ export default function TransactionsPage() {
         subtitle="Track your income, expenses, and transfers"
         icon="https://img.icons8.com/ios/50/activity-history.png"
       >
+        <StatementIngestionModal accounts={accounts} categories={categories} onComplete={fetchTransactions} />
         <Button
           variant="outline"
           className="flex gap-2"
@@ -562,19 +593,7 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <div className="space-y-8 mt-4">
-          {Object.entries(
-            transactions.reduce((acc, txn) => {
-              const dateStr = new Date(txn.date).toLocaleDateString(undefined, {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-              if (!acc[dateStr]) acc[dateStr] = []
-              acc[dateStr].push(txn)
-              return acc
-            }, {} as Record<string, Transaction[]>)
-          ).map(([dateStr, dailyTxns]) => {
+          {groupedTransactions.map(([dateStr, dailyTxns]) => {
             const dailyTotal = dailyTxns.reduce((sum, t) => {
               const amt = Number(t.amount)
               return t.type === "INCOME" || t.type === "LOAN_DISBURSEMENT" ? sum + amt : sum - amt
@@ -583,8 +602,8 @@ export default function TransactionsPage() {
             return (
               <div key={dateStr} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between mb-3 pl-2">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{dateStr}</h3>
-                  <span className={`text-sm font-bold ${dailyTotal >= 0 ? "text-emerald-500" : "text-foreground"}`}>
+                  <h3 className="text-xs font-bold text-muted-foreground/80 uppercase tracking-wider">{dateStr}</h3>
+                  <span className={`text-xs font-bold font-mono ${dailyTotal >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground/80"}`}>
                     {dailyTotal > 0 ? "+" : ""}{formatCurrency(dailyTotal)}
                   </span>
                 </div>
@@ -599,14 +618,14 @@ export default function TransactionsPage() {
                         <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner border border-border/40">
                           {txn.category?.icon || "💸"}
                         </div>
-
+ 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <p className="font-semibold text-base text-foreground/90 truncate">
+                            <p className="font-semibold text-sm text-foreground/90 truncate">
                               {txn.description || txn.merchant || txn.category?.name || "Untitled"}
                             </p>
                             <span
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${TYPE_COLORS[txn.type] || ""} bg-background border border-border/50`}
+                              className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${TYPE_COLORS[txn.type] || ""} bg-background border border-border/50`}
                             >
                               {txn.type.replace(/_/g, " ")}
                             </span>
@@ -628,12 +647,12 @@ export default function TransactionsPage() {
                           </p>
                         </div>
                       </div>
-
+ 
                       <div className="flex items-center gap-4 flex-shrink-0">
                         <p
-                          className={`font-extrabold text-lg tracking-tight ${
+                          className={`font-semibold text-sm font-mono tracking-tight ${
                             txn.type === "INCOME" || txn.type === "LOAN_DISBURSEMENT"
-                              ? "text-emerald-500"
+                              ? "text-emerald-600 dark:text-emerald-400"
                               : "text-foreground/90"
                           }`}
                         >

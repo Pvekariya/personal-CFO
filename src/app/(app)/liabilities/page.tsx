@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
+import dynamic from "next/dynamic"
+
+const DebtAvalancheOptimizer = dynamic(
+  () => import("@/components/liabilities/DebtAvalancheOptimizer").then((m) => m.DebtAvalancheOptimizer),
+  { ssr: false }
+)
 
 type Liability = {
   id: string
@@ -65,6 +71,10 @@ export default function LiabilitiesPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const handleFieldChange = (field: keyof typeof formData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   function resetForm() {
     setFormData({
@@ -142,9 +152,15 @@ export default function LiabilitiesPage() {
     }
   }
 
-  const totalOutstanding = liabilities.reduce((sum, l) => sum + parseFloat(l.outstandingBalance), 0)
-  const totalPrincipal = liabilities.reduce((sum, l) => sum + parseFloat(l.principalAmount), 0)
-  const totalEMI = liabilities.reduce((sum, l) => sum + (parseFloat(l.emiAmount || "0")), 0)
+  const { totalOutstanding, totalPrincipal, totalEMI } = useMemo(() => {
+    let out = 0, prin = 0, emi = 0
+    liabilities.forEach((l) => {
+      out += parseFloat(l.outstandingBalance || "0")
+      prin += parseFloat(l.principalAmount || "0")
+      emi += parseFloat(l.emiAmount || "0")
+    })
+    return { totalOutstanding: out, totalPrincipal: prin, totalEMI: emi }
+  }, [liabilities])
 
   return (
     <div className="space-y-6">
@@ -197,7 +213,7 @@ export default function LiabilitiesPage() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => handleFieldChange("name", e.target.value)}
                 placeholder="e.g. HDFC Home Loan"
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -209,7 +225,7 @@ export default function LiabilitiesPage() {
               <input
                 type="text"
                 value={formData.lender}
-                onChange={(e) => setFormData({ ...formData, lender: e.target.value })}
+                onChange={(e) => handleFieldChange("lender", e.target.value)}
                 placeholder="e.g. HDFC Bank, SBI"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -219,7 +235,7 @@ export default function LiabilitiesPage() {
               <label className="text-sm font-medium">Type *</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => handleFieldChange("type", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {LIABILITY_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
@@ -230,9 +246,10 @@ export default function LiabilitiesPage() {
               <label className="text-sm font-medium">Original Principal *</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={formData.principalAmount}
-                onChange={(e) => setFormData({ ...formData, principalAmount: e.target.value })}
+                onChange={(e) => handleFieldChange("principalAmount", e.target.value)}
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -242,9 +259,10 @@ export default function LiabilitiesPage() {
               <label className="text-sm font-medium">Outstanding Balance *</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={formData.outstandingBalance}
-                onChange={(e) => setFormData({ ...formData, outstandingBalance: e.target.value })}
+                onChange={(e) => handleFieldChange("outstandingBalance", e.target.value)}
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -254,9 +272,10 @@ export default function LiabilitiesPage() {
               <label className="text-sm font-medium">Monthly EMI</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={formData.emiAmount}
-                onChange={(e) => setFormData({ ...formData, emiAmount: e.target.value })}
+                onChange={(e) => handleFieldChange("emiAmount", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
@@ -265,9 +284,10 @@ export default function LiabilitiesPage() {
               <label className="text-sm font-medium">Interest Rate (Annual %)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 value={formData.interestRate}
-                onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+                onChange={(e) => handleFieldChange("interestRate", e.target.value)}
                 placeholder="e.g. 8.5"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -277,8 +297,9 @@ export default function LiabilitiesPage() {
               <label className="text-sm font-medium">Remaining Tenure (Months)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 value={formData.tenure}
-                onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
+                onChange={(e) => handleFieldChange("tenure", e.target.value)}
                 placeholder="e.g. 24"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -308,12 +329,12 @@ export default function LiabilitiesPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="px-6 py-4 font-medium">Liability</th>
-                <th className="px-6 py-4 font-medium">Type</th>
-                <th className="px-6 py-4 font-medium text-right">Interest / EMI</th>
-                <th className="px-6 py-4 font-medium text-right">Principal</th>
-                <th className="px-6 py-4 font-medium text-right">Outstanding</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold">Liability</th>
+                <th className="px-6 py-4 font-semibold">Type</th>
+                <th className="px-6 py-4 font-semibold text-right">Interest / EMI</th>
+                <th className="px-6 py-4 font-semibold text-right">Principal</th>
+                <th className="px-6 py-4 font-semibold text-right">Outstanding</th>
+                <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -326,16 +347,16 @@ export default function LiabilitiesPage() {
                   <tr key={liability.id} className="hover:bg-muted/30">
                     <td className="px-6 py-4">
                       <p className="font-semibold">{liability.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{liability.lender || "No lender"}</p>
+                      <p className="text-xs text-muted-foreground/80 mt-0.5">{liability.lender || "No lender"}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-500/10 text-rose-600">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-500/10 text-rose-600">
                         {liability.type.replace(/_/g, " ")}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {liability.interestRate ? <p className="font-medium text-amber-600">{liability.interestRate}%</p> : null}
-                      {liability.emiAmount ? <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(liability.emiAmount, currency)}/mo</p> : null}
+                      {liability.interestRate ? <p className="font-semibold text-foreground/90 font-mono">{liability.interestRate}%</p> : null}
+                      {liability.emiAmount ? <p className="text-xs text-muted-foreground/80 mt-0.5 font-mono">{formatCurrency(liability.emiAmount, currency)}/mo</p> : null}
                     </td>
                     <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
                       {formatCurrency(principal, currency)}
@@ -356,6 +377,11 @@ export default function LiabilitiesPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* CFO Debt Avalanche & Prepayment Optimizer */}
+      {!loading && liabilities.length > 0 && (
+        <DebtAvalancheOptimizer liabilities={liabilities} currency={currency} />
       )}
     </div>
   )

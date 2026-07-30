@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
+import dynamic from "next/dynamic"
+
+const PortfolioRebalancer = dynamic(
+  () => import("@/components/investments/PortfolioRebalancer").then((m) => m.PortfolioRebalancer),
+  { ssr: false }
+)
 
 type Asset = {
   id: string
@@ -59,6 +65,10 @@ export default function InvestmentsPage() {
   useEffect(() => {
     fetchAssets()
   }, [fetchAssets])
+
+  const handleFieldChange = (field: keyof typeof formData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   function resetForm() {
     setFormData({
@@ -134,10 +144,17 @@ export default function InvestmentsPage() {
     }
   }
 
-  const totalInvested = assets.reduce((sum, a) => sum + parseFloat(a.investedAmount), 0)
-  const totalCurrent = assets.reduce((sum, a) => sum + parseFloat(a.currentValue), 0)
-  const totalGains = totalCurrent - totalInvested
-  const totalGainsPercent = totalInvested > 0 ? (totalGains / totalInvested) * 100 : 0
+  const { totalInvested, totalCurrent, totalGains, totalGainsPercent } = useMemo(() => {
+    let invested = 0
+    let current = 0
+    assets.forEach((a) => {
+      invested += parseFloat(a.investedAmount || "0")
+      current += parseFloat(a.currentValue || "0")
+    })
+    const gains = current - invested
+    const gainsPct = invested > 0 ? (gains / invested) * 100 : 0
+    return { totalInvested: invested, totalCurrent: current, totalGains: gains, totalGainsPercent: gainsPct }
+  }, [assets])
 
   return (
     <div className="space-y-6">
@@ -195,7 +212,7 @@ export default function InvestmentsPage() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => handleFieldChange("name", e.target.value)}
                 placeholder="e.g. Parag Parikh Flexi Cap"
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -207,7 +224,7 @@ export default function InvestmentsPage() {
               <input
                 type="text"
                 value={formData.platform}
-                onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                onChange={(e) => handleFieldChange("platform", e.target.value)}
                 placeholder="e.g. Zerodha, Groww"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -217,7 +234,7 @@ export default function InvestmentsPage() {
               <label className="text-sm font-medium">Asset Class *</label>
               <select
                 value={formData.class}
-                onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                onChange={(e) => handleFieldChange("class", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {ASSET_CLASSES.map((c) => <option key={c} value={c}>{c.replace(/_/g, " ")}</option>)}
@@ -228,7 +245,7 @@ export default function InvestmentsPage() {
               <label className="text-sm font-medium">Asset Type *</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => handleFieldChange("type", e.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {ASSET_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
@@ -239,9 +256,10 @@ export default function InvestmentsPage() {
               <label className="text-sm font-medium">Invested Amount *</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={formData.investedAmount}
-                onChange={(e) => setFormData({ ...formData, investedAmount: e.target.value })}
+                onChange={(e) => handleFieldChange("investedAmount", e.target.value)}
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -251,9 +269,10 @@ export default function InvestmentsPage() {
               <label className="text-sm font-medium">Current Value *</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={formData.currentValue}
-                onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
+                onChange={(e) => handleFieldChange("currentValue", e.target.value)}
                 required
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -263,9 +282,10 @@ export default function InvestmentsPage() {
               <label className="text-sm font-medium">Expected Return (CAGR %)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 value={formData.expectedReturn}
-                onChange={(e) => setFormData({ ...formData, expectedReturn: e.target.value })}
+                onChange={(e) => handleFieldChange("expectedReturn", e.target.value)}
                 placeholder="e.g. 12"
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
@@ -295,12 +315,12 @@ export default function InvestmentsPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="px-6 py-4 font-medium">Asset</th>
-                <th className="px-6 py-4 font-medium">Type</th>
-                <th className="px-6 py-4 font-medium text-right">Invested</th>
-                <th className="px-6 py-4 font-medium text-right">Current Value</th>
-                <th className="px-6 py-4 font-medium text-right">Returns</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold">Asset</th>
+                <th className="px-6 py-4 font-semibold">Type</th>
+                <th className="px-6 py-4 font-semibold text-right">Invested</th>
+                <th className="px-6 py-4 font-semibold text-right">Current Value</th>
+                <th className="px-6 py-4 font-semibold text-right">Returns</th>
+                <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -315,22 +335,22 @@ export default function InvestmentsPage() {
                   <tr key={asset.id} className="hover:bg-muted/30">
                     <td className="px-6 py-4">
                       <p className="font-semibold">{asset.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{asset.platform || "No platform"}</p>
+                      <p className="text-xs text-muted-foreground/80 mt-0.5">{asset.platform || "No platform"}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">
                         {asset.type.replace(/_/g, " ")}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
+                    <td className="px-6 py-4 text-right tabular-nums text-muted-foreground font-mono">
                       {formatCurrency(invested)}
                     </td>
-                    <td className="px-6 py-4 text-right font-medium tabular-nums">
+                    <td className="px-6 py-4 text-right font-semibold tabular-nums font-mono">
                       {formatCurrency(current)}
                     </td>
-                    <td className={`px-6 py-4 text-right tabular-nums ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      <p>{isPositive ? "+" : ""}{formatCurrency(returns)}</p>
-                      <p className="text-xs">{isPositive ? "▲" : "▼"} {returnPercent.toFixed(2)}%</p>
+                    <td className={`px-6 py-4 text-right tabular-nums font-mono ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      <p className="font-bold">{isPositive ? "+" : ""}{formatCurrency(returns)}</p>
+                      <p className="text-[10px] opacity-80">{isPositive ? "+" : ""}{returnPercent.toFixed(2)}%</p>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button onClick={() => startEdit(asset)} className="text-primary hover:underline mr-3">Edit</button>
@@ -342,6 +362,11 @@ export default function InvestmentsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Target Asset Allocation & Rebalancer */}
+      {!loading && assets.length > 0 && (
+        <PortfolioRebalancer assets={assets} />
       )}
     </div>
   )

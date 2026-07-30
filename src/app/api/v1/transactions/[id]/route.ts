@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/client"
 import { requireAuth } from "@/lib/api/auth"
 import { apiSuccess, apiError } from "@/lib/api/response"
 import { updateTransactionSchema } from "@/lib/validations/transactions"
+import { convertCurrency } from "@/lib/currency"
 
 // GET /api/v1/transactions/[id]
 export async function GET(
@@ -69,6 +70,16 @@ export async function PATCH(
     const data = parsed.data
 
     const transaction = await prisma.$transaction(async (tx) => {
+      const workspace = await tx.workspace.findUnique({
+        where: { id: authResult.workspaceId },
+        select: { currency: true },
+      })
+      const baseCurrency = workspace?.currency || "INR"
+
+      const updatedAmount = data.amount !== undefined ? data.amount : Number(existing.amount)
+      const updatedCurrency = data.currency || existing.currency
+      const amountInBaseCurrency = await convertCurrency(updatedAmount, updatedCurrency, baseCurrency)
+
       // If amount or type changed, reverse old balance and apply new
       if (
         data.amount !== undefined &&
@@ -100,9 +111,10 @@ export async function PATCH(
         data: {
           ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
           ...(data.type !== undefined && { type: data.type }),
-          ...(data.amount !== undefined && {
-            amount: data.amount,
-            amountInBaseCurrency: data.amount,
+          ...((data.amount !== undefined || data.currency !== undefined) && {
+            amount: updatedAmount,
+            currency: updatedCurrency,
+            amountInBaseCurrency,
           }),
           ...(data.description !== undefined && {
             description: data.description,

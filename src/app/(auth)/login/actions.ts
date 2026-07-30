@@ -1,28 +1,39 @@
 "use server"
 
 import { signIn } from "@/auth"
-import { AuthError } from "next-auth"
+import { redirect } from "next/navigation"
+import { loginSchema } from "@/lib/validations/auth"
 
 export async function loginAction(_prevState: string | undefined, formData: FormData) {
   try {
-    await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      redirectTo: "/",
+    const parsed = loginSchema.safeParse({
+      email: formData.get("email"),
+      password: formData.get("password"),
     })
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin":
-          return "Invalid email or password."
-        case "CallbackRouteError":
-          return "Invalid email or password."
-        default:
-          return "Something went wrong. Please try again."
-      }
+
+    if (!parsed.success) {
+      return parsed.error.issues[0]?.message || "Please enter your email and password."
     }
-    // MUST re-throw: Auth.js signIn() throws a NEXT_REDIRECT on success.
-    // If we catch it here, the redirect never happens.
-    throw error
+
+    const result = await signIn("credentials", {
+      email: parsed.data.email,
+      password: parsed.data.password,
+      redirect: false,
+      redirectTo: "/dashboard",
+    })
+
+    if (result?.error) {
+      return "Invalid email or password."
+    }
+
+    redirect("/dashboard")
+  } catch (error: any) {
+    if ((error as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw error
+    }
+    if (error?.type === "CredentialsSignin" || error?.name === "AuthError" || error?.message?.includes("CredentialsSignin")) {
+      return "Invalid email or password."
+    }
+    return "Invalid email or password."
   }
 }

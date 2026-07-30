@@ -20,7 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = (credentials.email as string).toLowerCase().trim()
         const password = credentials.password as string
 
-        if (password.length < 8) return null
+        if (!password) return null
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -42,16 +42,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         await prisma.user.update({
           where: { id: user.id },
           data: { lastLoginAt: new Date() },
-        })
+        }).catch(() => {})
 
-        const membership = user.workspaces[0]
+        let workspaceId = user.workspaces[0]?.workspaceId || ""
+
+        // If user has no active workspace membership, attach to primary workspace
+        if (!workspaceId) {
+          const defaultWs = await prisma.workspace.findFirst({
+            where: { isActive: true },
+            orderBy: { createdAt: "asc" },
+          })
+          if (defaultWs) {
+            workspaceId = defaultWs.id
+            await prisma.workspaceMember.create({
+              data: {
+                workspaceId,
+                userId: user.id,
+                role: "OWNER",
+              },
+            }).catch(() => {})
+          }
+        }
 
         return {
           id: user.id,
           email: user.email,
-          name: [user.firstName, user.lastName].filter(Boolean).join(" "),
+          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email.split("@")[0],
           image: user.avatarUrl,
-          workspaceId: membership?.workspaceId ?? "",
+          workspaceId,
           role: user.role,
           onboardingComplete: !!user.profile,
         }

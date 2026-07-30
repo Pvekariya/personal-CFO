@@ -46,7 +46,7 @@ export const createAssetSchema = z.object({
   currentPrice: z.coerce.number().min(0).optional(),
   currentValue: z.coerce.number().min(0, "Current value cannot be negative"),
   investedAmount: z.coerce.number().min(0, "Invested amount cannot be negative"),
-  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
+  currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "CHF"]).default("INR"),
   purchaseDate: z.string().optional(),
   maturityDate: z.string().optional(),
   expectedReturn: z.coerce.number().min(0).max(100).optional(),

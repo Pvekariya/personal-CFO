@@ -1,8 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
-import { formatCurrency } from "@/lib/utils"
+import { useState, useEffect, useMemo } from "react"
+import { cn, formatCurrency } from "@/lib/utils"
+import dynamic from "next/dynamic"
+
+const CFOHealthAudit = dynamic(
+  () => import("@/components/analytics/CFOHealthAudit").then((m) => m.CFOHealthAudit),
+  { ssr: false }
+)
+
+const AllocationPieChart = dynamic(
+  () => import("@/components/analytics/AllocationPieChart").then((m) => m.AllocationPieChart),
+  { ssr: false }
+)
 
 type Asset = {
   id: string
@@ -12,28 +22,44 @@ type Asset = {
   investedAmount: string
   currentValue: string
   platform: string | null
+  convertedCurrentValue?: string
+  convertedInvestedAmount?: string
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#ffc658', '#82ca9d', '#a4de6c', '#d0ed57']
 
 export default function AnalyticsPage() {
   const [assets, setAssets] = useState<Asset[]>([])
+  const [accounts, setAccounts] = useState<any[]>([])
+  const [liabilities, setLiabilities] = useState<any[]>([])
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [profile, setProfile] = useState<any>(null)
   const [currency, setCurrency] = useState("INR")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [invRes, profRes] = await Promise.all([
+        const [invRes, profRes, accRes, liabRes, txnRes] = await Promise.all([
           fetch("/api/v1/investments"),
-          fetch("/api/v1/profile")
+          fetch("/api/v1/profile"),
+          fetch("/api/v1/accounts"),
+          fetch("/api/v1/liabilities"),
+          fetch("/api/v1/transactions"),
         ])
         
         const invJson = await invRes.json()
         const profJson = await profRes.json()
+        const accJson = await accRes.json()
+        const liabJson = await liabRes.json()
+        const txnJson = await txnRes.json()
         
         if (invJson.data) setAssets(invJson.data)
-        if (profJson.data?.currency) setCurrency(profJson.data.currency)
+        if (profJson.data) {
+          setProfile(profJson.data)
+          if (profJson.data.currency) setCurrency(profJson.data.currency)
+        }
+        if (accJson.data) setAccounts(accJson.data)
+        if (liabJson.data) setLiabilities(liabJson.data)
+        if (txnJson.data) setTransactions(txnJson.data)
       } catch (error) {
         console.error("Failed to load analytics data", error)
       } finally {
@@ -43,44 +69,43 @@ export default function AnalyticsPage() {
     fetchData()
   }, [])
 
+  // Calculate allocations using useMemo
+  const { totalPortfolioValue, classData, platformData } = useMemo(() => {
+    let totalPortfolioValue = 0
+    const classAllocationMap: Record<string, number> = {}
+    const platformMap: Record<string, number> = {}
+
+    assets.forEach(asset => {
+      const val = parseFloat(asset.convertedCurrentValue || asset.currentValue) || 0
+      totalPortfolioValue += val
+      
+      const assetClass = asset.class.replace(/_/g, " ")
+      if (!classAllocationMap[assetClass]) {
+        classAllocationMap[assetClass] = 0
+      }
+      classAllocationMap[assetClass] += val
+
+      const platform = asset.platform || "Other / Unspecified"
+      if (!platformMap[platform]) {
+        platformMap[platform] = 0
+      }
+      platformMap[platform] += val
+    })
+
+    const classData = Object.entries(classAllocationMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+
+    const platformData = Object.entries(platformMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+
+    return { totalPortfolioValue, classData, platformData }
+  }, [assets])
+
   if (loading) {
     return <div className="text-center py-12 text-muted-foreground">Loading analytics...</div>
   }
-
-  // Calculate Asset Allocation (by Class)
-  const classAllocationMap: Record<string, number> = {}
-  let totalPortfolioValue = 0
-
-  assets.forEach(asset => {
-    const val = parseFloat(asset.currentValue)
-    totalPortfolioValue += val
-    
-    const assetClass = asset.class.replace(/_/g, " ")
-    if (!classAllocationMap[assetClass]) {
-      classAllocationMap[assetClass] = 0
-    }
-    classAllocationMap[assetClass] += val
-  })
-
-  const classData = Object.entries(classAllocationMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-
-  // Calculate Platform Allocation
-  const platformMap: Record<string, number> = {}
-  assets.forEach(asset => {
-    const val = parseFloat(asset.currentValue)
-    const platform = asset.platform || "Other / Unspecified"
-    
-    if (!platformMap[platform]) {
-      platformMap[platform] = 0
-    }
-    platformMap[platform] += val
-  })
-
-  const platformData = Object.entries(platformMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
 
   return (
     <div className="space-y-6">
@@ -99,90 +124,32 @@ export default function AnalyticsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Asset Class Allocation */}
-          <div className="rounded-xl border border-border bg-card p-6 flex flex-col items-center">
-            <h3 className="font-semibold text-lg self-start w-full border-b pb-4 mb-4">
-              Allocation by Asset Class
-            </h3>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={classData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {classData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: any) => formatCurrency(Number(value || 0), currency)}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full mt-4 space-y-2">
-              {classData.map((item, index) => (
-                <div key={item.name} className="flex justify-between text-sm border-b border-border/50 pb-2 last:border-0">
-                  <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
-                    {item.name}
-                  </span>
-                  <span className="font-medium">
-                    {((item.value / totalPortfolioValue) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <AllocationPieChart
+            title="Allocation by Asset Class"
+            data={classData}
+            totalValue={totalPortfolioValue}
+            colorOffset={0}
+            currency={currency}
+          />
 
-          {/* Platform Distribution */}
-          <div className="rounded-xl border border-border bg-card p-6 flex flex-col items-center">
-            <h3 className="font-semibold text-lg self-start w-full border-b pb-4 mb-4">
-              Distribution by Platform
-            </h3>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={platformData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {platformData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: any) => formatCurrency(Number(value || 0), currency)}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full mt-4 space-y-2">
-              {platformData.map((item, index) => (
-                <div key={item.name} className="flex justify-between text-sm border-b border-border/50 pb-2 last:border-0">
-                  <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[(index + 3) % COLORS.length] }}></span>
-                    {item.name}
-                  </span>
-                  <span className="font-medium">
-                    {((item.value / totalPortfolioValue) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              ))}
-            </div>
+          <AllocationPieChart
+            title="Distribution by Platform"
+            data={platformData}
+            totalValue={totalPortfolioValue}
+            colorOffset={3}
+            currency={currency}
+          />
+
+          {/* CFO 7-Point Financial Health Audit */}
+          <div className="md:col-span-2">
+            <CFOHealthAudit
+              assets={assets}
+              accounts={accounts}
+              liabilities={liabilities}
+              transactions={transactions}
+              profile={profile}
+              currency={currency}
+            />
           </div>
 
         </div>

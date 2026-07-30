@@ -39,6 +39,7 @@ enum CurrencyCode {
   GBP
   AED
   SGD
+  CHF
 }
 
 enum AccountType {

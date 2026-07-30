@@ -1,7 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { formatCurrency } from "@/lib/utils"
+import dynamic from "next/dynamic"
+
+const TaxOptimizer = dynamic(
+  () => import("@/components/shared/TaxOptimizer").then((m) => m.TaxOptimizer),
+  { ssr: false }
+)
 
 export default function TaxPage() {
   const [loading, setLoading] = useState(true)
@@ -116,14 +122,14 @@ export default function TaxPage() {
       </div>
 
       {savings > 0 && (
-        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center gap-4">
-          <div className="text-3xl">💡</div>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center gap-4">
+          <div className="text-2xl">💡</div>
           <div>
-            <h4 className="text-emerald-800 font-semibold text-lg">
+            <h4 className="text-emerald-600 dark:text-emerald-400 font-bold text-base">
               You should choose the {isOldBetter ? "Old Regime" : "New Regime"}!
             </h4>
-            <p className="text-emerald-700 text-sm">
-              It saves you <span className="font-bold">{formatCurrency(savings, currency)}</span> compared to the other regime.
+            <p className="text-muted-foreground text-xs mt-0.5">
+              It saves you <span className="font-bold text-foreground">{formatCurrency(savings, currency)}</span> compared to the other regime.
             </p>
           </div>
         </div>
@@ -133,14 +139,14 @@ export default function TaxPage() {
         
         {/* Left Side: Inputs */}
         <div className="space-y-6">
-          <div className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-sm">
-            <h3 className="font-semibold text-lg border-b pb-2">Income & Deductions</h3>
-            <p className="text-xs text-muted-foreground">Values are auto-filled from your Transactions but can be manually overridden.</p>
+          <div className="premium-card p-6 space-y-4 shadow-sm">
+            <h3 className="font-bold text-base border-b pb-2">Income & Deductions</h3>
+            <p className="text-xs text-muted-foreground/80">Values are auto-filled from your Transactions but can be manually overridden.</p>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Gross Salary / Total Income</label>
               <div className="relative">
-                <span className="absolute left-3 top-2 text-muted-foreground">₹</span>
+                <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">₹</span>
                 <input
                   type="number"
                   value={grossIncome}
@@ -153,7 +159,7 @@ export default function TaxPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Standard Deduction</label>
               <div className="relative">
-                <span className="absolute left-3 top-2 text-muted-foreground">₹</span>
+                <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">₹</span>
                 <input
                   type="number"
                   value={standardDeduction}
@@ -166,7 +172,7 @@ export default function TaxPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Section 80C Investments</label>
               <div className="relative">
-                <span className="absolute left-3 top-2 text-muted-foreground">₹</span>
+                <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">₹</span>
                 <input
                   type="number"
                   value={deduction80C}
@@ -174,13 +180,13 @@ export default function TaxPage() {
                   className="flex h-10 w-full rounded-lg border border-input bg-background pl-8 pr-3 py-2 text-sm shadow-sm"
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground">Max limit ₹1,50,000 (PF, ELSS, Life Insurance, etc.)</p>
+              <p className="text-[10px] text-muted-foreground/80">Max limit ₹1,50,000 (PF, ELSS, Life Insurance, etc.)</p>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Other Deductions (80D, HRA, LTA)</label>
               <div className="relative">
-                <span className="absolute left-3 top-2 text-muted-foreground">₹</span>
+                <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">₹</span>
                 <input
                   type="number"
                   value={otherDeductions}
@@ -197,12 +203,12 @@ export default function TaxPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Old Regime Card */}
-            <div className={`rounded-xl border p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all ${isOldBetter && oldTax !== newTax ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border bg-card'}`}>
-              <h4 className="font-semibold text-muted-foreground">Old Tax Regime</h4>
-              <div className="text-3xl font-bold">
+            <div className={`premium-card p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all ${isOldBetter && oldTax !== newTax ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border'}`}>
+              <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Old Tax Regime</h4>
+              <div className="text-2xl font-bold font-mono">
                 {formatCurrency(oldTax, currency)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/80">
                 Taxable: {formatCurrency(Math.max(0, grossIncome - standardDeduction - deduction80C - otherDeductions), currency)}
               </p>
               {isOldBetter && oldTax !== newTax && (
@@ -213,12 +219,12 @@ export default function TaxPage() {
             </div>
 
             {/* New Regime Card */}
-            <div className={`rounded-xl border p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all ${!isOldBetter && oldTax !== newTax ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border bg-card'}`}>
-              <h4 className="font-semibold text-muted-foreground">New Tax Regime</h4>
-              <div className="text-3xl font-bold">
+            <div className={`premium-card p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all ${!isOldBetter && oldTax !== newTax ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border'}`}>
+              <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">New Tax Regime</h4>
+              <div className="text-2xl font-bold font-mono">
                 {formatCurrency(newTax, currency)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/80">
                 Taxable: {formatCurrency(Math.max(0, grossIncome - standardDeduction), currency)}
               </p>
               {!isOldBetter && oldTax !== newTax && (
@@ -247,6 +253,16 @@ export default function TaxPage() {
               </li>
             </ul>
           </div>
+
+          {/* Tax Saving & Deduction Maximizer */}
+          <TaxOptimizer
+            grossIncome={grossIncome}
+            deduction80C={deduction80C}
+            otherDeductions={otherDeductions}
+            oldTax={oldTax}
+            newTax={newTax}
+            currency={currency}
+          />
         </div>
 
       </div>
